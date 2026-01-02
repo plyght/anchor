@@ -1,2 +1,25 @@
-
+# Convex
 .env.local
+.convex/
+convex/_generated/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*.local
+
+# Build outputs
+dist/
+out/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
