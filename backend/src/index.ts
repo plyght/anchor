@@ -23,13 +23,14 @@ app.route('/api/matching', matching);
 
 startEscalationMonitor(1, { timeoutMinutes: 5, maxEscalationCount: 3 });
 
+export { app };
+
 if (typeof Bun !== 'undefined') {
   const port = parseInt(process.env.PORT || '3000');
   console.log(`🚀 Server starting on http://localhost:${port}`);
-  export default {
+  const server = {
     port,
     fetch: app.fetch,
   };
+  (globalThis as any).__bunServer = server;
 }
-
-export { app };
