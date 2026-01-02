@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 interface Location {
   lat: number;
@@ -36,6 +37,9 @@ function isAvailableNow(
     "saturday",
   ];
   const currentDay = dayNames[now.getDay()];
+  if (!currentDay) {
+    return false;
+  }
   const currentTime = now.getHours() * 60 + now.getMinutes();
 
   const schedule = availabilitySchedule[currentDay] || [];
@@ -46,8 +50,17 @@ function isAvailableNow(
     const [start, end] = slot.split("-");
     if (!start || !end) continue;
 
-    const [startHour, startMin] = start.split(":").map(Number);
-    const [endHour, endMin] = end.split(":").map(Number);
+    const startParts = start.split(":");
+    const endParts = end.split(":");
+    if (startParts.length < 2 || endParts.length < 2) continue;
+
+    const startHour = Number(startParts[0]);
+    const startMin = Number(startParts[1]);
+    const endHour = Number(endParts[0]);
+    const endMin = Number(endParts[1]);
+    
+    if (isNaN(startHour) || isNaN(startMin) || isNaN(endHour) || isNaN(endMin)) continue;
+
     const startTime = startHour * 60 + startMin;
     const endTime = endHour * 60 + endMin;
 
@@ -151,11 +164,11 @@ export const matchTasksToVolunteers = query({
 
     const usedVolunteers = new Set<string>();
     const assignments: Array<{
-      task_id: string;
-      volunteer_id: string;
+      task_id: Id<"tasks">;
+      volunteer_id: Id<"volunteers">;
       score: number;
     }> = [];
-    const unmatched: string[] = [];
+    const unmatched: Id<"tasks">[] = [];
 
     const tasksByPriority = [...tasks].sort((a, b) => {
       const priorityOrder: Record<string, number> = {

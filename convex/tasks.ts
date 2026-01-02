@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 function generateAcceptanceCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -73,16 +74,20 @@ export const list = query({
     })
   ),
   handler: async (ctx, args) => {
-    let query = ctx.db.query("tasks");
+    let query = ctx.db.query("tasks").fullTableScan();
 
     if (args.incident_id) {
-      query = query.withIndex("by_incident", (q) =>
-        q.eq("incident_id", args.incident_id!)
-      );
+      query = ctx.db
+        .query("tasks")
+        .withIndex("by_incident", (q) =>
+          q.eq("incident_id", args.incident_id!)
+        );
     } else if (args.status) {
-      query = query.withIndex("by_status", (q) =>
-        q.eq("status", args.status!)
-      );
+      query = ctx.db
+        .query("tasks")
+        .withIndex("by_status", (q) =>
+          q.eq("status", args.status!)
+        );
     }
 
     return await query.order("desc").collect();
@@ -313,7 +318,7 @@ export const generateForIncident = mutation({
       },
     ];
 
-    const taskIds: Array<string> = [];
+    const taskIds: Array<Id<"tasks">> = [];
     for (const task of floodTasks) {
       let code = generateAcceptanceCode();
       const existing = await ctx.db

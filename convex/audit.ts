@@ -115,18 +115,20 @@ export const getAuditLog = query({
     })
   ),
   handler: async (ctx, args) => {
-    let query = ctx.db.query("audit_log");
+    let query = ctx.db.query("audit_log").fullTableScan();
 
     if (args.entity_type && args.entity_id) {
-      query = query.withIndex("by_entity", (q) =>
-        q.eq("entity_type", args.entity_type!).eq("entity_id", args.entity_id!)
-      );
+      query = ctx.db
+        .query("audit_log")
+        .withIndex("by_entity", (q) =>
+          q.eq("entity_type", args.entity_type!).eq("entity_id", args.entity_id!)
+        );
     } else if (args.entity_type) {
-      query = query
+      query = ctx.db
+        .query("audit_log")
         .withIndex("by_entity", (q) =>
           q.eq("entity_type", args.entity_type!)
-        )
-        .filter((q) => q.eq(q.field("entity_type"), args.entity_type!));
+        );
     }
 
     return await query.order("desc").take(args.limit ?? 100);

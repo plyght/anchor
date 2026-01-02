@@ -36,12 +36,16 @@ export const list = query({
         escalation_count: v.number(),
     })),
     handler: async (ctx, args) => {
-        let query = ctx.db.query("tasks");
+        let query = ctx.db.query("tasks").fullTableScan();
         if (args.incident_id) {
-            query = query.withIndex("by_incident", (q) => q.eq("incident_id", args.incident_id));
+            query = ctx.db
+                .query("tasks")
+                .withIndex("by_incident", (q) => q.eq("incident_id", args.incident_id));
         }
         else if (args.status) {
-            query = query.withIndex("by_status", (q) => q.eq("status", args.status));
+            query = ctx.db
+                .query("tasks")
+                .withIndex("by_status", (q) => q.eq("status", args.status));
         }
         return await query.order("desc").collect();
     },
