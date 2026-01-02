@@ -21,13 +21,15 @@ app.route('/api/incidents', incidents);
 app.route('/api/tasks', tasks);
 app.route('/api/matching', matching);
 
-const port = parseInt(process.env.PORT || '3000');
-
-console.log(`🚀 Server starting on http://localhost:${port}`);
-
 startEscalationMonitor(1, { timeoutMinutes: 5, maxEscalationCount: 3 });
 
-export default {
-  port,
-  fetch: app.fetch,
-};
+if (typeof Bun !== 'undefined') {
+  const port = parseInt(process.env.PORT || '3000');
+  console.log(`🚀 Server starting on http://localhost:${port}`);
+  export default {
+    port,
+    fetch: app.fetch,
+  };
+}
+
+export { app };
