@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "convex dev"
+    "dev": "convex dev",
+    "postinstall": "cd backend && npm install && npm run build"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",

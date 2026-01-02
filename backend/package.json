@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "build": "tsc -p tsconfig.prod.json || true",
+    "postinstall": "npm run build",
     "start:node": "node dist/server.js",
     "dev": "bun run src/index.ts"
   },
@@ -14,10 +15,6 @@
     "typescript": "^5"
   },
   "peerDependencies": {
-    "typescript": "^5"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
     "typescript": "^5"
   },
   "dependencies": {
