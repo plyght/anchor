@@ -1,0 +1,21 @@
+app: anchor-backend
+services:
+  - name: api
+    type: web
+    build:
+      builder: buildpack
+      buildCommand: bun install
+    run:
+      command: bun start
+    ports:
+      - port: 3000
+        protocol: http
+    env:
+      - name: PORT
+        value: "3000"
+    healthcheck:
+      http:
+        path: /health
+        port: 3000
+      initialDelaySeconds: 30
+      timeoutSeconds: 10

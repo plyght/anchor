@@ -1,8 +1,12 @@
 {
   "name": "backend",
-  "module": "index.ts",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run src/index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
@@ -11,11 +15,8 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.19.7",
-    "@types/pg": "^8.16.0",
-    "better-auth": "^1.4.10",
     "convex": "^1.31.2",
     "hono": "^4.11.3",
-    "pg": "^8.16.3",
     "zod": "^4.3.4"
   }
 }

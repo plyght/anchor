@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@convex-dev/auth": "^0.0.90",
     "convex": "^1.31.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.0",

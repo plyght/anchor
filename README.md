@@ -113,19 +113,45 @@ X7Y2 DONE  # Mark complete
 
 Bridge validates code and updates database automatically.
 
+## Authentication
+
+Anchor uses [Convex Auth](https://labs.convex.dev/auth) for authentication, which stores user credentials directly in Convex (no separate database required).
+
+### Auth Features:
+- Password-based authentication
+- Email/password signup and login
+- Session management handled by Convex
+- No external auth service needed
+
+### Adding OAuth Providers:
+
+To add OAuth (GitHub, Google, etc.), update `convex/auth.ts`:
+
+```typescript
+import { GitHub, Google } from "@convex-dev/auth/providers";
+
+export const { auth, signIn, signOut, store } = convexAuth({
+  providers: [Password, GitHub, Google],
+});
+```
+
+See [Convex Auth docs](https://labs.convex.dev/auth) for full configuration options.
+
 ## Configuration
 
 ### Frontend Environment
 
 ```env
 VITE_CONVEX_URL=https://your-project.convex.cloud
+VITE_API_URL=http://localhost:3000
 ```
 
 ### Backend Environment
 
 ```env
+PORT=3000
+CONVEX_URL=https://your-project.convex.cloud
 CONVEX_DEPLOY_KEY=your-convex-deploy-key
-DATABASE_URL=postgresql://postgres:password@localhost:5432/postgres
 ```
 
 ## Architecture
@@ -218,14 +244,14 @@ bun test
 
 - Runtime: Bun (JavaScript/TypeScript)
 - Backend: Hono (Web framework) + Convex
-- Auth: better-auth (can be migrated to Convex auth)
+- Auth: Convex Auth (password-based authentication)
 - Database: Convex (reactive database)
 - Frontend: React + Vite + Convex React hooks
 - Styling: TailwindCSS
 - Mesh Network: BitChat (Bluetooth LE)
 - Bridge: Rust (bitchat-terminal fork)
 
-Dependencies: convex, hono, better-auth, react-router-dom, zustand.
+Dependencies: convex, @convex-dev/auth, hono, react-router-dom, zustand.
 
 ## Convex Functions
 
@@ -259,7 +285,8 @@ Dependencies: convex, hono, better-auth, react-router-dom, zustand.
 - Convex functions use validators for all inputs
 - Internal functions are not exposed to public API
 - Acceptance codes prevent unauthorized task claiming
-- Row-level security handled by Convex auth (when implemented)
+- Authentication handled by Convex Auth with secure session management
+- Password hashing and secure storage built into Convex Auth
 
 ## Migration from Supabase
 
@@ -270,6 +297,84 @@ This project has been migrated from Supabase to Convex. Key changes:
 3. **Backend API**: REST endpoints → Convex queries/mutations
 4. **Scheduled Jobs**: PostgreSQL triggers → Convex cron jobs
 5. **Type Safety**: Manual types → Auto-generated Convex types
+
+## Deployment
+
+### Backend Deployment (Koyeb)
+
+1. **Create Koyeb Account**: Sign up at [koyeb.com](https://koyeb.com)
+
+2. **Deploy from GitHub**:
+   - Connect your GitHub repository to Koyeb
+   - Select the `backend` directory as the build context
+   - Set build command: `bun install`
+   - Set run command: `bun start`
+   - Set port: `3000` (or use Koyeb's auto-detected port)
+
+3. **Configure Environment Variables** in Koyeb dashboard:
+   ```
+   PORT=3000
+   CONVEX_URL=https://your-project.convex.cloud
+   CONVEX_DEPLOY_KEY=prod:your-project|your-deploy-key
+   ```
+
+4. **Get Convex Deploy Key**:
+   - Go to Convex dashboard → Settings → Deploy Keys
+   - Create a new production deploy key
+   - Copy and add to Koyeb environment variables
+
+### Frontend Deployment (Vercel)
+
+1. **Create Vercel Account**: Sign up at [vercel.com](https://vercel.com)
+
+2. **Deploy from GitHub**:
+   - Import your GitHub repository
+   - Vercel will auto-detect Vite configuration
+   - Root directory: `frontend`
+   - Build command: `bun run build` (auto-detected)
+   - Output directory: `dist` (auto-detected)
+
+3. **Configure Environment Variables** in Vercel dashboard:
+   ```
+   VITE_CONVEX_URL=https://your-project.convex.cloud
+   VITE_API_URL=https://your-backend.koyeb.app
+   ```
+
+4. **Deploy**: Vercel will automatically deploy on every push to main branch
+
+### Convex Production Deployment
+
+Before deploying frontend/backend, deploy your Convex functions:
+
+```bash
+# From project root
+bunx convex deploy --prod
+
+# This will:
+# 1. Deploy all functions to production
+# 2. Output your production CONVEX_URL
+# 3. Generate production deploy keys
+```
+
+Use the production `CONVEX_URL` in both frontend and backend environment variables.
+
+### Post-Deployment Checklist
+
+- [ ] Convex functions deployed to production
+- [ ] Backend deployed to Koyeb with correct environment variables
+- [ ] Frontend deployed to Vercel with correct environment variables
+- [ ] Database provisioned and accessible
+- [ ] Health check endpoint responds: `https://your-backend.koyeb.app/health`
+- [ ] Frontend loads and connects to Convex
+- [ ] Auth flow works end-to-end
+- [ ] Test incident creation and task generation
+
+### Monitoring
+
+- **Backend Health**: `GET https://your-backend.koyeb.app/health`
+- **Convex Dashboard**: Monitor function calls, logs, and database queries
+- **Vercel Dashboard**: Monitor deployments and analytics
+- **Koyeb Dashboard**: Monitor backend logs and performance
 
 ## License
 

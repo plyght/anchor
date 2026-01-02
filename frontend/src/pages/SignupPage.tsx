@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthActions } from '@convex-dev/auth/react';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -9,10 +10,24 @@ export default function SignupPage() {
     bitchatUsername: '',
     phone: '',
   });
+  const [error, setError] = useState('');
+  const { signIn } = useAuthActions();
+  const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Signup:', formData);
+    setError('');
+    try {
+      await signIn('password', { 
+        email: formData.email, 
+        password: formData.password, 
+        flow: 'signUp' 
+      });
+      navigate('/');
+    } catch (err) {
+      setError('Failed to create account. Email may already be in use.');
+      console.error('Signup error:', err);
+    }
   };
 
   return (
@@ -22,6 +37,11 @@ export default function SignupPage() {
           ⚓ Volunteer Signup
         </h1>
         <form onSubmit={handleSignup} className="space-y-4">
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Full Name

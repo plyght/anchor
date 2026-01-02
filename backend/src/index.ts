@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { auth } from './auth';
 import volunteers from './routes/volunteers';
 import incidents from './routes/incidents';
 import tasks from './routes/tasks';
@@ -16,8 +15,6 @@ app.use('*', cors());
 app.get('/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
-app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw));
 
 app.route('/api/volunteers', volunteers);
 app.route('/api/incidents', incidents);

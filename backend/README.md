@@ -1,6 +1,6 @@
 # Anchor Backend
 
-Emergency volunteer coordination API built with Bun + Hono + better-auth.
+Emergency volunteer coordination API built with Bun + Hono + Convex.
 
 ## Setup
 
@@ -14,22 +14,17 @@ bun install
 cp .env.example .env
 ```
 
-3. Update `.env` with your Supabase credentials
+3. Update `.env` with your Convex URL and deploy key
 
 4. Run the server:
 ```bash
-bun run src/index.ts
+bun start
 ```
 
 ## API Endpoints
 
 ### Health Check
 - `GET /health` - Server health status
-
-### Auth (better-auth)
-- `POST /api/auth/signup` - Register new user
-- `POST /api/auth/login` - Login
-- `GET /api/auth/session` - Get current session
 
 ### Volunteers
 - `GET /api/volunteers` - List all volunteers
@@ -47,10 +42,15 @@ bun run src/index.ts
 - `POST /api/tasks/generate` - Generate tasks for incident
 - `PATCH /api/tasks/:id` - Update task status
 
+### Matching
+- `POST /api/matching/match` - Match volunteers to tasks
+
+**Note:** Authentication is handled by Convex Auth in the frontend. No backend auth endpoints needed.
+
 ## Development
 
 ```bash
-bun run src/index.ts
+bun start
 ```
 
 Server runs on http://localhost:3000
