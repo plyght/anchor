@@ -1,4 +1,4 @@
-import { convex, api } from './convex';
+import { convex, api } from './convex.js';
 import type { Id } from '../../../convex/_generated/dataModel';
 
 export async function logAuditEvent(

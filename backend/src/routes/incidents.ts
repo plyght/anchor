@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { convex, api } from '../lib/convex';
+import { convex, api } from '../lib/convex.js';
 import type { Id } from '../../../convex/_generated/dataModel';
 
 const incidents = new Hono();

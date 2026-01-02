@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import volunteers from './routes/volunteers';
-import incidents from './routes/incidents';
-import tasks from './routes/tasks';
-import matching from './routes/matching';
-import { startEscalationMonitor } from './lib/escalation';
+import volunteers from './routes/volunteers.js';
+import incidents from './routes/incidents.js';
+import tasks from './routes/tasks.js';
+import matching from './routes/matching.js';
+import { startEscalationMonitor } from './lib/escalation.js';
 
 const app = new Hono();
 
