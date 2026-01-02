@@ -1,7 +1,6 @@
 # Convex
 .env.local
 .convex/
-convex/_generated/
 
 # Dependencies
 node_modules/
