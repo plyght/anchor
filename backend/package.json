@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.19.7",
-    "@supabase/supabase-js": "^2.89.0",
     "@types/pg": "^8.16.0",
     "better-auth": "^1.4.10",
     "convex": "^1.31.2",

@@ -1,113 +1,84 @@
 import { Hono } from 'hono';
-import { supabase } from '../lib/supabase';
-import type { Task } from '../types';
+import { convex, api } from '../lib/convex';
+import type { Id } from '../../../convex/_generated/dataModel';
 
 const tasks = new Hono();
 
-function generateAcceptanceCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 4; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
-
 tasks.get('/', async (c) => {
-  const status = c.req.query('status');
-  const incident_id = c.req.query('incident_id');
-  
-  let query = supabase
-    .from('tasks')
-    .select('*, volunteers(*), incidents(*)');
-
-  if (status) {
-    query = query.eq('status', status);
-  }
-  
-  if (incident_id) {
-    query = query.eq('incident_id', incident_id);
+  if (!convex) {
+    return c.json({ error: 'Convex client not initialized' }, 500);
   }
 
-  const { data, error } = await query.order('created_at', { ascending: false });
+  const status = c.req.query('status') as
+    | 'pending'
+    | 'dispatched'
+    | 'accepted'
+    | 'in_progress'
+    | 'completed'
+    | 'cancelled'
+    | 'failed'
+    | undefined;
+  const incident_id = c.req.query('incident_id') as Id<'incidents'> | undefined;
 
-  if (error) {
-    return c.json({ error: error.message }, 500);
+  try {
+    const tasks = await convex.query(api.tasks.list, {
+      status,
+      incident_id,
+    });
+    return c.json({ tasks });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return c.json({ error: message }, 500);
   }
-
-  return c.json({ tasks: data });
 });
 
 tasks.post('/generate', async (c) => {
-  const { incident_id } = await c.req.json();
-  
-  const floodTasks = [
-    {
-      title: 'Check levee integrity',
-      description: 'Inspect levee for cracks and structural damage',
-      task_type: 'inspection',
-      priority: 'urgent',
-      required_skills: ['inspection', 'engineering'],
-    },
-    {
-      title: 'Assess property damage',
-      description: 'Document water damage to residential properties',
-      task_type: 'inspection',
-      priority: 'high',
-      required_skills: ['inspection', 'documentation'],
-    },
-    {
-      title: 'Distribute sandbags',
-      description: 'Deliver and place sandbags at critical locations',
-      task_type: 'delivery',
-      priority: 'high',
-      required_skills: ['heavy_lifting', 'driving'],
-    },
-    {
-      title: 'Document water levels',
-      description: 'Take photos and measurements of current water levels',
-      task_type: 'report',
-      priority: 'medium',
-      required_skills: ['documentation'],
-    },
-  ];
-
-  const tasksToInsert = floodTasks.map(task => ({
-    ...task,
-    incident_id,
-    acceptance_code: generateAcceptanceCode(),
-    status: 'pending',
-    escalation_count: 0,
-  }));
-
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert(tasksToInsert)
-    .select();
-
-  if (error) {
-    return c.json({ error: error.message }, 400);
+  if (!convex) {
+    return c.json({ error: 'Convex client not initialized' }, 500);
   }
 
-  return c.json({ tasks: data }, 201);
+  const { incident_id } = await c.req.json();
+
+  if (!incident_id) {
+    return c.json({ error: 'incident_id is required' }, 400);
+  }
+
+  try {
+    const taskIds = await convex.mutation(api.tasks.generateForIncident, {
+      incident_id: incident_id as Id<'incidents'>,
+    });
+
+    const tasks = await Promise.all(
+      taskIds.map((id) => convex.query(api.tasks.get, { id }))
+    );
+
+    return c.json({ tasks: tasks.filter((t) => t !== null) }, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return c.json({ error: message }, 400);
+  }
 });
 
 tasks.patch('/:id', async (c) => {
-  const id = c.req.param('id');
-  const body = await c.req.json();
-  
-  const { data, error } = await supabase
-    .from('tasks')
-    .update(body)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    return c.json({ error: error.message }, 400);
+  if (!convex) {
+    return c.json({ error: 'Convex client not initialized' }, 500);
   }
 
-  return c.json({ task: data });
+  const id = c.req.param('id') as Id<'tasks'>;
+  const body = await c.req.json();
+
+  try {
+    await convex.mutation(api.tasks.update, {
+      id,
+      ...body,
+    });
+
+    const task = await convex.query(api.tasks.get, { id });
+    return c.json({ task });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return c.json({ error: message }, 400);
+  }
 });
 
 export default tasks;
