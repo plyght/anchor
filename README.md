@@ -11,26 +11,36 @@ Anchor coordinates emergency response volunteers through a token-gated task syst
 - **Infrastructure-Independent**: Operates over Bluetooth LE mesh when internet/cellular networks are unavailable
 - **Token-Gated Tasks**: 4-character acceptance codes prevent unauthorized task claiming
 - **Intelligent Matching**: Skills-based task assignment with availability and location awareness
-- **Real-Time Coordination**: Live dashboard updates via Supabase real-time subscriptions
+- **Real-Time Coordination**: Live dashboard updates via Convex reactive queries
 - **Audit Trail**: Complete system history for compliance and post-incident analysis
 - **Escalation System**: Automatic task reassignment when volunteers don't respond
-- **Bridge Architecture**: PostgreSQL NOTIFY/LISTEN connects web app to mesh network
+- **Bridge Architecture**: Convex scheduled functions connect web app to mesh network
 
 ## Installation
 
 ### Prerequisites
 - Bun 1.0+
-- Supabase account or local PostgreSQL 14+
+- Convex account (sign up at https://convex.dev)
 - BitChat iOS/Android app for volunteers
 - Rust 1.70+ (for bridge component)
 
-### Database Setup
+### Convex Setup
 
 ```bash
-# Create Supabase project at https://supabase.com
-# Then run the migration
-cd supabase
-# Paste migrations/001_initial_schema.sql into SQL Editor
+# From the project root, run Convex dev
+bunx convex dev
+
+# This will:
+# 1. Login/create account (if first time)
+# 2. Create/select a project
+# 3. Generate types in convex/_generated/
+# 4. Create .env.local with CONVEX_URL
+```
+
+After running `convex dev`, copy the `CONVEX_URL` from `.env.local` to `frontend/.env` as `VITE_CONVEX_URL`:
+```bash
+# Copy CONVEX_URL from .env.local to frontend/.env
+echo "VITE_CONVEX_URL=$(grep CONVEX_URL .env.local | cut -d '=' -f2)" >> frontend/.env
 ```
 
 ### Backend Setup
@@ -38,7 +48,7 @@ cd supabase
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env with Supabase credentials
+# Edit .env with Convex deploy key if needed
 bun install
 bun run src/index.ts
 ```
@@ -50,7 +60,7 @@ Backend runs on http://localhost:3000
 ```bash
 cd frontend
 cp .env.example .env
-# Edit .env with Supabase credentials
+# Edit .env with your Convex URL (from convex dev output)
 bun install
 bun dev
 ```
@@ -61,33 +71,33 @@ Frontend runs on http://localhost:5173
 
 ### Creating an Incident
 
-```bash
-curl -X POST http://localhost:3000/api/incidents \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "River Flood - Section B",
-    "incident_type": "flood",
-    "severity": "high",
-    "trigger_data": {"water_level": 15.2, "threshold": 12.0}
-  }'
+Use the admin dashboard at http://localhost:5173/admin or call Convex mutations directly:
+
+```typescript
+import { useMutation } from 'convex/react';
+import { api } from './convex/_generated/api';
+
+const createIncident = useMutation(api.incidents.create);
+const incidentId = await createIncident({
+  title: "River Flood - Section B",
+  incident_type: "flood",
+  severity: "high",
+  trigger_data: { water_level: 15.2, threshold: 12.0 }
+});
 ```
 
 ### Generating Tasks
 
-```bash
-curl -X POST http://localhost:3000/api/tasks/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "incident_id": "uuid-here",
-    "tasks": [
-      {
-        "title": "Check levee section B5",
-        "task_type": "assessment",
-        "priority": "urgent",
-        "required_skills": ["engineering", "water_rescue"]
-      }
-    ]
-  }'
+```typescript
+const generateTasks = useMutation(api.tasks.generateForIncident);
+const taskIds = await generateTasks({ incident_id: incidentId });
+```
+
+### Matching Volunteers to Tasks
+
+```typescript
+const matchIncident = useMutation(api.matching.matchIncident);
+const result = await matchIncident({ incident_id: incidentId });
 ```
 
 ### Volunteer Response Flow
@@ -105,31 +115,17 @@ Bridge validates code and updates database automatically.
 
 ## Configuration
 
-### Backend Environment
-
-```env
-PORT=3000
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key
-DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres
-BETTER_AUTH_SECRET=your-random-secret
-BETTER_AUTH_URL=http://localhost:3000
-```
-
 ### Frontend Environment
 
 ```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_API_URL=http://localhost:3000
+VITE_CONVEX_URL=https://your-project.convex.cloud
 ```
 
-### Bridge Environment (Future)
+### Backend Environment
 
 ```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key
-DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres
+CONVEX_DEPLOY_KEY=your-convex-deploy-key
+DATABASE_URL=postgresql://postgres:password@localhost:5432/postgres
 ```
 
 ## Architecture
@@ -139,8 +135,8 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
 ```
 Web App (React + Bun)
     ↓
-Supabase (PostgreSQL + Realtime)
-    ↓ (NOTIFY/LISTEN)
+Convex (Reactive Database + Functions)
+    ↓ (Scheduled Functions)
 Bridge Process (Rust)
     ↓ (Bluetooth LE)
 BitChat Mesh Network (iOS/Android)
@@ -148,35 +144,49 @@ BitChat Mesh Network (iOS/Android)
 
 ### Database Schema
 
-**volunteers**: User profiles with BitChat usernames, skills, availability schedules
-**incidents**: Emergency events with severity, type, trigger data
-**tasks**: Work items with acceptance codes, status, required skills
-**task_assignments**: Assignment history and responses for audit trail
-**audit_log**: Complete system audit trail
-**mesh_messages**: Bluetooth mesh message log for debugging
+Convex schema defined in `convex/schema.ts`:
+
+- **volunteers**: User profiles with BitChat usernames, skills, availability schedules
+- **incidents**: Emergency events with severity, type, trigger data
+- **tasks**: Work items with acceptance codes, status, required skills
+- **task_assignments**: Assignment history and responses for audit trail
+- **audit_log**: Complete system audit trail
+- **mesh_messages**: Bluetooth mesh message log for debugging
 
 ### Key Components
 
-- `backend/src/routes/`: REST API endpoints for CRUD operations
-- `backend/src/lib/matching.ts`: Skills-based volunteer matching algorithm
-- `backend/src/lib/escalation.ts`: Timeout-based task reassignment
-- `backend/src/lib/audit.ts`: System audit trail generation
+- `convex/volunteers.ts`: Volunteer CRUD operations
+- `convex/incidents.ts`: Incident management
+- `convex/tasks.ts`: Task management and generation
+- `convex/matching.ts`: Skills-based volunteer matching algorithm
+- `convex/escalation.ts`: Timeout-based task reassignment (scheduled)
+- `convex/audit.ts`: System audit trail generation
+- `convex/crons.ts`: Scheduled escalation checks
 - `frontend/src/pages/`: Dashboard, incident, and volunteer management UIs
-- `supabase/migrations/`: Database schema with RLS policies and triggers
 
 ### Bridge Integration
 
 The bridge process connects web infrastructure to mesh network:
 
-1. PostgreSQL LISTEN subscribes to `task_dispatch` channel
-2. Tasks inserted with `status='dispatched'` trigger NOTIFY
+1. Convex scheduled functions check for dispatched tasks
+2. Tasks with `status='dispatched'` trigger bridge notification
 3. Bridge forwards task to BitChat mesh network
 4. Bridge parses volunteer response codes
-5. Bridge updates Supabase with task status changes
+5. Bridge updates Convex with task status changes
 
 Implementation: `docs/bridge-implementation-plan.md`
 
 ## Development
+
+### Convex Development
+
+```bash
+# Start Convex dev server (generates types automatically)
+convex dev
+
+# Deploy to production
+convex deploy
+```
 
 ### Backend Development
 
@@ -190,16 +200,6 @@ bun run src/index.ts
 ```bash
 cd frontend
 bun dev
-```
-
-### Database Migrations
-
-```bash
-cd supabase
-# Add new migration
-supabase migration new migration_name
-# Apply migrations
-supabase db reset
 ```
 
 ### Testing
@@ -217,46 +217,59 @@ bun test
 ## Tech Stack
 
 - Runtime: Bun (JavaScript/TypeScript)
-- Backend: Hono (Web framework)
-- Auth: better-auth
-- Database: Supabase (PostgreSQL 14+)
-- Frontend: React + Vite
+- Backend: Hono (Web framework) + Convex
+- Auth: better-auth (can be migrated to Convex auth)
+- Database: Convex (reactive database)
+- Frontend: React + Vite + Convex React hooks
 - Styling: TailwindCSS
 - Mesh Network: BitChat (Bluetooth LE)
 - Bridge: Rust (bitchat-terminal fork)
 
-Dependencies: @supabase/supabase-js, hono, better-auth, react-router-dom, zustand, pg.
+Dependencies: convex, hono, better-auth, react-router-dom, zustand.
 
-## API Endpoints
+## Convex Functions
 
-### Authentication
-- `POST /api/auth/signup` - Register volunteer
-- `POST /api/auth/login` - Authenticate user
-- `GET /api/auth/session` - Get current session
+### Queries (Read-only)
+- `api.volunteers.list` - List all volunteers
+- `api.volunteers.get` - Get volunteer by ID
+- `api.volunteers.getByStatus` - Filter by status
+- `api.incidents.list` - List all incidents
+- `api.incidents.get` - Get incident by ID
+- `api.incidents.getByStatus` - Filter by status
+- `api.tasks.list` - List tasks (filterable by status/incident)
+- `api.tasks.get` - Get task by ID
+- `api.matching.matchTasksToVolunteers` - Calculate matches
 
-### Volunteers
-- `GET /api/volunteers` - List volunteers
-- `GET /api/volunteers/:id` - Get volunteer details
-- `POST /api/volunteers` - Create volunteer
-- `PATCH /api/volunteers/:id` - Update volunteer
+### Mutations (Write)
+- `api.volunteers.create` - Create volunteer
+- `api.volunteers.update` - Update volunteer
+- `api.incidents.create` - Create incident
+- `api.tasks.create` - Create task
+- `api.tasks.update` - Update task
+- `api.tasks.generateForIncident` - Generate default tasks
+- `api.matching.assignTaskToVolunteer` - Assign task
+- `api.matching.matchIncident` - Match and assign all tasks
+- `api.audit.logAuditEvent` - Log audit event
 
-### Incidents
-- `GET /api/incidents` - List incidents
-- `GET /api/incidents/:id` - Get incident with tasks
-- `POST /api/incidents` - Create incident
-
-### Tasks
-- `GET /api/tasks?status=pending&incident_id=xxx` - Filter tasks
-- `POST /api/tasks/generate` - Generate tasks for incident
-- `PATCH /api/tasks/:id` - Update task status
+### Scheduled Functions
+- `internal.escalation.checkAndEscalateTasks` - Runs every minute via cron
 
 ## Security
 
-- Row Level Security (RLS) enabled on all tables
-- JWT-based authentication via better-auth
-- Service role key restricted to backend and bridge only
-- Anon key safe for client use with RLS policies
+- Convex functions use validators for all inputs
+- Internal functions are not exposed to public API
 - Acceptance codes prevent unauthorized task claiming
+- Row-level security handled by Convex auth (when implemented)
+
+## Migration from Supabase
+
+This project has been migrated from Supabase to Convex. Key changes:
+
+1. **Database**: PostgreSQL → Convex reactive database
+2. **Real-time**: Supabase subscriptions → Convex reactive queries
+3. **Backend API**: REST endpoints → Convex queries/mutations
+4. **Scheduled Jobs**: PostgreSQL triggers → Convex cron jobs
+5. **Type Safety**: Manual types → Auto-generated Convex types
 
 ## License
 

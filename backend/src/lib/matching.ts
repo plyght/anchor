@@ -23,6 +23,7 @@ function isAvailableNow(availabilitySchedule: Record<string, string[]>): boolean
   const now = new Date();
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const currentDay = dayNames[now.getDay()];
+  if (!currentDay) return false;
   const currentTime = now.getHours() * 60 + now.getMinutes();
   
   const schedule = availabilitySchedule[currentDay] || [];
@@ -33,8 +34,14 @@ function isAvailableNow(availabilitySchedule: Record<string, string[]>): boolean
     const [start, end] = slot.split('-');
     if (!start || !end) continue;
     
-    const [startHour, startMin] = start.split(':').map(Number);
-    const [endHour, endMin] = end.split(':').map(Number);
+    const startParts = start.split(':').map(Number);
+    const endParts = end.split(':').map(Number);
+    if (startParts.length < 2 || endParts.length < 2) continue;
+    
+    const [startHour, startMin] = startParts;
+    const [endHour, endMin] = endParts;
+    if (startHour === undefined || startMin === undefined || endHour === undefined || endMin === undefined) continue;
+    
     const startTime = startHour * 60 + startMin;
     const endTime = endHour * 60 + endMin;
     

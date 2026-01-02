@@ -1,28 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import Layout from '../components/Layout';
-import { supabase } from '../lib/supabase';
-
-interface Incident {
-  id: string;
-  title: string;
-  severity: string;
-  status: string;
-  created_at: string;
-  incident_type: string;
-}
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    activeIncidents: 0,
-    pendingTasks: 0,
-    availableVolunteers: 0,
-  });
-  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    incidentType: 'flood' | 'fire' | 'earthquake' | 'medical' | 'rescue' | 'infrastructure' | 'other';
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    waterLevel: string;
+    threshold: string;
+    address: string;
+  }>({
     title: '',
     description: '',
     incidentType: 'flood',
@@ -32,103 +26,58 @@ export default function AdminDashboardPage() {
     address: '',
   });
 
-  useEffect(() => {
-    loadDashboardData();
-    
-    const incidentChannel = supabase
-      .channel('incidents_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, () => {
-        loadDashboardData();
-      })
-      .subscribe();
+  const activeIncidents = useQuery(api.incidents.getByStatus, {
+    status: 'active',
+  });
+  const pendingTasks = useQuery(api.tasks.list, { status: 'pending' });
+  const availableVolunteers = useQuery(api.volunteers.getByStatus, {
+    status: 'online',
+  });
+  const recentIncidents = useQuery(api.incidents.list, {});
 
-    const tasksChannel = supabase
-      .channel('tasks_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-        loadDashboardData();
-      })
-      .subscribe();
+  const createIncident = useMutation(api.incidents.create);
+  const generateTasks = useMutation(api.tasks.generateForIncident);
+  const matchIncident = useMutation(api.matching.matchIncident);
 
-    return () => {
-      supabase.removeChannel(incidentChannel);
-      supabase.removeChannel(tasksChannel);
-    };
-  }, []);
-
-  async function loadDashboardData() {
-    const [incidentsRes, tasksRes, volunteersRes] = await Promise.all([
-      supabase.from('incidents').select('*').eq('status', 'active'),
-      supabase.from('tasks').select('*').eq('status', 'pending'),
-      supabase.from('volunteers').select('*').eq('current_status', 'available'),
-    ]);
-
-    setStats({
-      activeIncidents: incidentsRes.data?.length || 0,
-      pendingTasks: tasksRes.data?.length || 0,
-      availableVolunteers: volunteersRes.data?.length || 0,
-    });
-
-    const { data: recentIncidents } = await supabase
-      .from('incidents')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    setIncidents(recentIncidents || []);
-  }
+  const stats = {
+    activeIncidents: activeIncidents?.length ?? 0,
+    pendingTasks: pendingTasks?.length ?? 0,
+    availableVolunteers: availableVolunteers?.length ?? 0,
+  };
 
   async function handleCreateIncident(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
 
     try {
-      const { data: incident, error: incidentError } = await supabase
-        .from('incidents')
-        .insert({
-          title: formData.title,
-          description: formData.description,
-          incident_type: formData.incidentType,
-          severity: formData.severity,
-          status: 'active',
-          trigger_data: {
-            water_level: parseFloat(formData.waterLevel) || 0,
-            threshold: parseFloat(formData.threshold) || 0,
-            address: formData.address,
-          },
-        })
-        .select()
-        .single();
-
-      if (incidentError) throw incidentError;
-
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const tasksResponse = await fetch(`${apiUrl}/api/tasks/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ incident_id: incident.id }),
+      const incidentId = await createIncident({
+        title: formData.title,
+        description: formData.description,
+        incident_type: formData.incidentType,
+        severity: formData.severity,
+        status: 'active',
+        trigger_data: {
+          water_level: parseFloat(formData.waterLevel) || 0,
+          threshold: parseFloat(formData.threshold) || 0,
+          address: formData.address,
+        },
       });
 
-      if (!tasksResponse.ok) throw new Error('Failed to generate tasks');
-
-      const matchResponse = await fetch(`${apiUrl}/api/matching/incidents/${incident.id}/match`, {
-        method: 'POST',
-      });
-
-      if (!matchResponse.ok) throw new Error('Failed to match tasks');
+      await generateTasks({ incident_id: incidentId });
+      await matchIncident({ incident_id: incidentId });
 
       setShowCreateModal(false);
       setFormData({
         title: '',
         description: '',
-        incidentType: 'flood',
-        severity: 'high',
+        incidentType: 'flood' as const,
+        severity: 'high' as const,
         waterLevel: '',
         threshold: '',
         address: '',
       });
-      
-      await loadDashboardData();
-      navigate(`/incidents/${incident.id}`);
+
+      navigate(`/incidents/${incidentId}`);
     } catch (error) {
       console.error('Error creating incident:', error);
       alert('Failed to create incident. Please try again.');
@@ -136,6 +85,8 @@ export default function AdminDashboardPage() {
       setCreating(false);
     }
   }
+
+  const incidents = recentIncidents?.slice(0, 5) ?? [];
 
   return (
     <Layout>
@@ -171,16 +122,16 @@ export default function AdminDashboardPage() {
             <p className="text-gray-500 text-center py-8">No incidents yet</p>
           ) : (
             <div className="space-y-3">
-              {incidents.map((incident) => (
+              {incidents.map((incident: { _id: string; title: string; incident_type: string; severity: string; status: string; _creationTime: number }) => (
                 <div
-                  key={incident.id}
-                  onClick={() => navigate(`/incidents/${incident.id}`)}
+                  key={incident._id}
+                  onClick={() => navigate(`/incidents/${incident._id}`)}
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
                 >
                   <div>
                     <h3 className="font-medium text-gray-900">{incident.title}</h3>
                     <p className="text-sm text-gray-500">
-                      {incident.incident_type} • {new Date(incident.created_at).toLocaleString()}
+                      {incident.incident_type} • {new Date(incident._creationTime).toLocaleString()}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -249,7 +200,7 @@ export default function AdminDashboardPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                   <select
                     value={formData.incidentType}
-                    onChange={(e) => setFormData({ ...formData, incidentType: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, incidentType: e.target.value as typeof formData.incidentType })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     <option value="flood">Flood</option>
@@ -265,7 +216,7 @@ export default function AdminDashboardPage() {
                   </label>
                   <select
                     value={formData.severity}
-                    onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, severity: e.target.value as typeof formData.severity })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     required
                   >
