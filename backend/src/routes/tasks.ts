@@ -43,13 +43,15 @@ tasks.post('/generate', async (c) => {
     return c.json({ error: 'incident_id is required' }, 400);
   }
 
+  const client = convex;
+
   try {
-    const taskIds = await convex.mutation(api.tasks.generateForIncident, {
+    const taskIds = await client.mutation(api.tasks.generateForIncident, {
       incident_id: incident_id as Id<'incidents'>,
     });
 
     const tasks = await Promise.all(
-      taskIds.map((id) => convex.query(api.tasks.get, { id }))
+      taskIds.map((id) => client.query(api.tasks.get, { id }))
     );
 
     return c.json({ tasks: tasks.filter((t) => t !== null) }, 201);

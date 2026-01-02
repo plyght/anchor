@@ -19,3 +19,7 @@ services:
         port: 3000
       initialDelaySeconds: 30
       timeoutSeconds: 10
+      intervalSeconds: 10
+      successThreshold: 1
+      failureThreshold: 3
+      gracePeriodSeconds: 30
