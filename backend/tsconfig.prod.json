@@ -5,7 +5,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "target": "ES2022",
     "allowImportingTsExtensions": false,
     "verbatimModuleSyntax": false,
