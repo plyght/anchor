@@ -29,17 +29,36 @@ swift build
 
 ## Running
 
+### Standalone (no anchor backend)
+
 ```bash
-.build/debug/anchor-ble-cli
+.build/release/anchor-ble-cli
+```
+
+### With Anchor Backend
+
+```bash
+export ANCHOR_BACKEND_URL=http://localhost:8000
+./RUN.sh
+```
+
+Or use the script directly:
+
+```bash
+./RUN.sh
 ```
 
 The CLI will:
-1. Generate a random 8-byte peer ID
-2. Start advertising as a BLE peripheral (service UUID: `F47B5E2D-4A9E-4C5A-9B3F-8E1D2C3A4B5A` for debug)
-3. Scan for and connect to other bitchat peers
-4. Send periodic announces (every 30 seconds)
-5. Accept typed messages from stdin to broadcast
-6. Print received messages to stdout
+1. Generate Ed25519 signing keys and derive peer ID from noise key
+2. Announce as **"anchor-alerts"** on the mesh
+3. Start advertising as a BLE peripheral (production UUID)
+4. Scan for and connect to bitchat peers
+5. Send signed periodic announces (every 30 seconds)
+6. **Poll anchor backend** every 5s for dispatched tasks
+7. **Broadcast tasks** to mesh with acceptance codes
+8. **Parse volunteer responses** (e.g., "X7Y2 A", "X7Y2 DONE")
+9. **Report responses** back to anchor backend
+10. Accept typed messages from stdin to broadcast
 
 ### Interactive Commands
 
@@ -91,28 +110,61 @@ hello from mac
 
 These match the bitchat protocol exactly.
 
-## Integration with Anchor
+## Anchor Backend Integration
 
-To integrate with anchor backend:
+The bridge now includes full anchor backend integration:
 
-1. **HTTP/WebSocket Server**: Add HTTP server to receive commands from anchor backend
-2. **Message Queue**: Queue messages to send over BLE
-3. **Callback Handler**: Forward received messages to anchor backend via HTTP POST
+### Task Dispatching
 
-Example integration:
+1. Anchor admin creates incident and generates tasks
+2. Admin clicks "Dispatch" → task status becomes `dispatched`
+3. Bridge polls `GET /api/tasks?status=dispatched` every 5 seconds
+4. Bridge broadcasts to mesh: `"TASK#<id>: <description> | Code: <code>"`
+5. Volunteers see task in bitchat app
 
-```swift
-service.onMessageReceived = { packet in
-    let json = [
-        "sender": packet.senderID.hexEncodedString(),
-        "type": packet.type,
-        "payload": String(data: packet.payload, encoding: .utf8) ?? "",
-        "timestamp": packet.timestamp
-    ]
-    
-    postToAnchorBackend(json)
+### Volunteer Responses
+
+Volunteers respond in bitchat:
+```
+X7Y2 A      # Accept task
+X7Y2 D      # Decline task  
+X7Y2 DONE   # Mark complete
+```
+
+Bridge parses responses and calls:
+```
+POST /api/tasks/<id>/respond
+{
+  "volunteer_id": "ea02bc8074a9d27c",
+  "action": "A" | "D" | "DONE"
 }
 ```
+
+### Environment Variables
+
+- `ANCHOR_BACKEND_URL` - Backend URL (default: `http://localhost:8000`)
+
+### Testing
+
+1. **Start backend**:
+   ```bash
+   cd ~/anchor/backend
+   bun run src/index.ts
+   ```
+
+2. **Start bridge**:
+   ```bash
+   cd ~/anchor/anchor-ble-bridge
+   ./RUN.sh
+   ```
+
+3. **Create task** via admin UI at http://localhost:5173/admin
+
+4. **Dispatch task** → appears on phones
+
+5. **Respond from phone**: Type `<code> A` in bitchat
+
+6. **Verify** in admin UI that response was recorded
 
 ## Development
 

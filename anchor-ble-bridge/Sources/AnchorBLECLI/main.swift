@@ -12,7 +12,7 @@ guard let myPeerID = Data(hexString: String(peerIDString)) else {
     fatalError("Failed to create peer ID")
 }
 
-let myNickname = "anchor_\(myPeerID.prefix(4).hexEncodedString())"
+let myNickname = "anchor-alerts"
 
 print("🔑 Noise key SHA256: \(myNoiseKey.sha256Fingerprint())")
 print("🆔 Derived peer ID:  \(peerIDString)")
@@ -23,12 +23,32 @@ let service = AnchorBLEService(peerID: myPeerID, noiseKey: myNoiseKey, signingKe
 service.onMessageReceived = { (packet: BitchatPacket) in
     let timestamp = Date(timeIntervalSince1970: Double(packet.timestamp) / 1000.0)
     let timeStr = DateFormatter.localizedString(from: timestamp, dateStyle: .none, timeStyle: .medium)
+    let volunteerId = packet.senderID.hexEncodedString()
+    
+    let isDirect = packet.recipientID != nil
+    let prefix = isDirect ? "📨 DM" : "📩 Message"
     
     if packet.type == 0x02 {
         if let message = String(data: packet.payload, encoding: .utf8) {
-            print("[\(timeStr)] 📩 Message from \(packet.senderID.hexEncodedString().prefix(8)): \(message)")
+            print("[\(timeStr)] \(prefix) from \(volunteerId.prefix(8)): \(message)")
+            
+            let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            let parts = trimmed.split(separator: " ")
+            
+            if parts.count == 2 {
+                let code = String(parts[0])
+                let action = String(parts[1])
+                
+                if ["A", "ACCEPT", "D", "DECLINE", "DONE", "COMPLETE"].contains(action) {
+                    print("   ✅ Task response detected: code=\(code) action=\(action)")
+                    
+                    Task {
+                        await anchor.reportTaskResponse(taskId: code, volunteerId: volunteerId, action: action)
+                    }
+                }
+            }
         } else {
-            print("[\(timeStr)] 📩 Message from \(packet.senderID.hexEncodedString().prefix(8)) [binary data, \(packet.payload.count) bytes]")
+            print("[\(timeStr)] 📩 Message from \(volunteerId.prefix(8)) [binary data, \(packet.payload.count) bytes]")
         }
     } else if packet.type == 0x01 {
         if let announcement = AnnouncementPacket.decode(from: packet.payload) {
@@ -45,7 +65,25 @@ service.onMessageReceived = { (packet: BitchatPacket) in
     }
 }
 
+let anchorBackendURL = ProcessInfo.processInfo.environment["ANCHOR_BACKEND_URL"] ?? "http://localhost:8000"
+let anchor = AnchorIntegration(backendURL: anchorBackendURL)
+
+anchor.onTaskReceived = { task in
+    print("\n🚨 NEW TASK: \(task.title)")
+    print("   \(task.description)")
+    print("   Code: \(task.acceptance_code)")
+    
+    if let targetVolunteer = task.target_volunteer_id {
+        print("   🎯 Targeted to: \(targetVolunteer.prefix(8))")
+        service.sendMessage(task.meshMessage, to: task.recipientPeerID)
+    } else {
+        print("   📢 Broadcasting to all volunteers")
+        service.sendMessage(task.meshMessage)
+    }
+}
+
 service.start()
+anchor.startPolling()
 
 print("🚀 Anchor BLE Bridge started")
 print("📡 Peer ID: \(myPeerID.hexEncodedString())")

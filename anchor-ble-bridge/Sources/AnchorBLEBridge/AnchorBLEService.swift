@@ -91,16 +91,20 @@ public class AnchorBLEService: NSObject {
         }
     }
     
-    public func sendMessage(_ content: String) {
+    public func sendMessage(_ content: String, to recipientPeerID: Data? = nil) {
         var packet = BitchatPacket(
             type: 0x02,
             senderID: myPeerID,
-            recipientID: nil,
+            recipientID: recipientPeerID,
             timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
             payload: Data(content.utf8),
             signature: nil,
             ttl: 7
         )
+        
+        if recipientPeerID != nil {
+            SecureLogger.info("📨 Sending directed message to \(recipientPeerID!.hexEncodedString().prefix(8))", category: .bluetooth)
+        }
         
         if let packetDataForSigning = packet.toBinaryDataForSigning() {
             do {

@@ -14,11 +14,15 @@ let package = Package(
             name: "anchor-ble-cli",
             targets: ["AnchorBLECLI"]),
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.9.0")
+    ],
     targets: [
         .target(
             name: "AnchorBLEBridge",
-            dependencies: []),
+            dependencies: [
+                .product(name: "AsyncHTTPClient", package: "async-http-client")
+            ]),
         .executableTarget(
             name: "AnchorBLECLI",
             dependencies: ["AnchorBLEBridge"]),

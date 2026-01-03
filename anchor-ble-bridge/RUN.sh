@@ -1,7 +1,10 @@
 #!/bin/bash
-cd ~/anchor/anchor-ble-bridge
-echo "Building..."
-swift build -c release
+cd "$(dirname "$0")"
+
+export ANCHOR_BACKEND_URL="${ANCHOR_BACKEND_URL:-http://localhost:8000}"
+
+echo "🚀 Starting Anchor BLE Bridge"
+echo "📡 Backend: $ANCHOR_BACKEND_URL"
 echo ""
-echo "Starting Anchor BLE Bridge..."
+
 ./.build/release/anchor-ble-cli
