@@ -28,6 +28,7 @@ export const getMyProfile = query({
           address: v.string(),
         })
       ),
+      is_admin: v.optional(v.boolean()),
     }),
     v.null()
   ),
@@ -60,6 +61,22 @@ export const hasCompletedOnboarding = query({
   },
 });
 
+export const isAdmin = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx: any) => {
+    const user = await authComponent.getAuthUser(ctx);
+    if (!user) {
+      return false;
+    }
+    const volunteer = await ctx.db
+      .query("volunteers")
+      .filter((q: any) => q.eq(q.field("user_id"), user.userId || user._id))
+      .first();
+    return volunteer?.is_admin === true;
+  },
+});
+
 export const list = query({
   args: {},
   returns: v.array(
@@ -86,6 +103,7 @@ export const list = query({
           address: v.string(),
         })
       ),
+      is_admin: v.optional(v.boolean()),
     })
   ),
   handler: async (ctx: any) => {
@@ -123,6 +141,7 @@ export const get = query({
           address: v.string(),
         })
       ),
+      is_admin: v.optional(v.boolean()),
     }),
     v.null()
   ),
@@ -155,6 +174,7 @@ export const create = mutation({
         address: v.string(),
       })
     ),
+    is_admin: v.optional(v.boolean()),
   },
   returns: v.id("volunteers"),
   handler: async (ctx: any, args: any) => {
@@ -180,6 +200,7 @@ export const create = mutation({
       availability_schedule: args.availability_schedule ?? {},
       current_status: args.current_status ?? "offline",
       location: args.location,
+      is_admin: args.is_admin ?? false,
     });
   },
 });
@@ -209,6 +230,7 @@ export const update = mutation({
         address: v.string(),
       })
     ),
+    is_admin: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx: any, args: any) => {
@@ -255,6 +277,7 @@ export const getByStatus = query({
           address: v.string(),
         })
       ),
+      is_admin: v.optional(v.boolean()),
     })
   ),
   handler: async (ctx: any, args: any) => {

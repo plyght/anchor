@@ -23,6 +23,7 @@ export default defineSchema({
         address: v.string(),
       })
     ),
+    is_admin: v.optional(v.boolean()),
   })
     .index("by_bitchat_username", ["bitchat_username"])
     .index("by_status", ["current_status"]),

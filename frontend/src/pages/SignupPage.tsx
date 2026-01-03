@@ -12,8 +12,6 @@ export default function SignupPage() {
     fullName: '',
     email: '',
     password: '',
-    bitchatUsername: '',
-    phone: '',
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -94,29 +92,6 @@ export default function SignupPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="bitchat">BitChat Handle</Label>
-                <Input
-                  id="bitchat"
-                  placeholder="@handle"
-                  value={formData.bitchatUsername}
-                  onChange={(e) => setFormData({ ...formData, bitchatUsername: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone (Optional)</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+1..."
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
             </div>
 
             <Button type="submit" className="w-full mt-2" disabled={isLoading}>

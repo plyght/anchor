@@ -6,6 +6,7 @@ import App from './App.tsx'
 import { convex } from './lib/convex.ts'
 import { wakeupBackend } from './lib/backendWakeup.ts'
 import { authClient } from './lib/auth-client'
+import { ThemeProvider } from './components/ThemeProvider'
 
 function Root() {
   const [backendReady, setBackendReady] = useState(false);
@@ -125,9 +126,11 @@ function Root() {
   
   return (
     <StrictMode>
-      <ConvexBetterAuthProvider client={convex} authClient={authClient}>
-        <App />
-      </ConvexBetterAuthProvider>
+      <ThemeProvider defaultTheme="system" storageKey="anchor-ui-theme">
+        <ConvexBetterAuthProvider client={convex} authClient={authClient}>
+          <App />
+        </ConvexBetterAuthProvider>
+      </ThemeProvider>
     </StrictMode>
   );
 }

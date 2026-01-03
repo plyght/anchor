@@ -1,22 +1,36 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { authClient } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
-import { ShieldAlert, LayoutDashboard, Users, UserCircle } from 'lucide-react';
+import { ShieldAlert, LayoutDashboard, UserCircle, LogIn } from 'lucide-react';
 
 export default function Header() {
   const location = useLocation();
-
-  const navItems = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/admin', label: 'Admin', icon: ShieldAlert },
-    { path: '/profile', label: 'Profile', icon: UserCircle },
-    { path: '/login', label: 'Login', icon: Users },
-  ];
+  const { data: session, isPending } = authClient.useSession();
+  const isAuthenticated = session !== null;
+  const isAdmin = useQuery(
+    api.volunteers.isAdmin,
+    isAuthenticated ? {} : "skip"
+  );
 
   const isActive = (path: string) => {
     return location.pathname === path 
       ? 'text-primary bg-primary/10' 
       : 'text-muted-foreground hover:text-primary hover:bg-muted';
   };
+
+  const authenticatedNavItems = [
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard, show: true },
+    { path: '/admin', label: 'Admin', icon: ShieldAlert, show: isAdmin === true },
+    { path: '/profile', label: 'Profile', icon: UserCircle, show: true },
+  ];
+
+  const unauthenticatedNavItems = [
+    { path: '/login', label: 'Login', icon: LogIn, show: true },
+  ];
+
+  const navItems = isAuthenticated ? authenticatedNavItems : unauthenticatedNavItems;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
@@ -31,7 +45,7 @@ export default function Header() {
         </div>
         
         <nav className="flex gap-1">
-          {navItems.map((link) => {
+          {!isPending && navItems.filter(item => item.show).map((link) => {
             const Icon = link.icon;
             return (
               <Link 

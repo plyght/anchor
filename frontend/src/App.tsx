@@ -127,6 +127,33 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireAdmin({ children }: { children: React.ReactNode }) {
+  const { data: session, isPending } = authClient.useSession();
+  const isAuthenticated = session !== null;
+  const isAdmin = useQuery(
+    api.volunteers.isAdmin,
+    isAuthenticated ? {} : "skip"
+  );
+
+  if (isPending) {
+    return <LoadingScreen />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isAdmin === undefined) {
+    return <LoadingScreen />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -143,7 +170,9 @@ function App() {
           path="/admin"
           element={
             <RequireOnboarding>
-              <AdminDashboardPage />
+              <RequireAdmin>
+                <AdminDashboardPage />
+              </RequireAdmin>
             </RequireOnboarding>
           }
         />

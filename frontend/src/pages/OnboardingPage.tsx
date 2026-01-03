@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Check, ChevronRight, ChevronLeft, MapPin, User, Calendar, Briefcase, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +47,29 @@ const TIME_SLOTS = [
   { id: 'night', label: '00:00-06:00', display: 'Night' },
 ];
 
+const LOCATIONS = [
+  { value: 'new-york-ny', label: 'New York, NY', lat: 40.7128, lon: -74.0060 },
+  { value: 'los-angeles-ca', label: 'Los Angeles, CA', lat: 34.0522, lon: -118.2437 },
+  { value: 'chicago-il', label: 'Chicago, IL', lat: 41.8781, lon: -87.6298 },
+  { value: 'houston-tx', label: 'Houston, TX', lat: 29.7604, lon: -95.3698 },
+  { value: 'phoenix-az', label: 'Phoenix, AZ', lat: 33.4484, lon: -112.0740 },
+  { value: 'philadelphia-pa', label: 'Philadelphia, PA', lat: 39.9526, lon: -75.1652 },
+  { value: 'san-antonio-tx', label: 'San Antonio, TX', lat: 29.4241, lon: -98.4936 },
+  { value: 'san-diego-ca', label: 'San Diego, CA', lat: 32.7157, lon: -117.1611 },
+  { value: 'dallas-tx', label: 'Dallas, TX', lat: 32.7767, lon: -96.7970 },
+  { value: 'san-jose-ca', label: 'San Jose, CA', lat: 37.3382, lon: -121.8863 },
+  { value: 'austin-tx', label: 'Austin, TX', lat: 30.2672, lon: -97.7431 },
+  { value: 'jacksonville-fl', label: 'Jacksonville, FL', lat: 30.3322, lon: -81.6557 },
+  { value: 'san-francisco-ca', label: 'San Francisco, CA', lat: 37.7749, lon: -122.4194 },
+  { value: 'columbus-oh', label: 'Columbus, OH', lat: 39.9612, lon: -82.9988 },
+  { value: 'fort-worth-tx', label: 'Fort Worth, TX', lat: 32.7555, lon: -97.3308 },
+  { value: 'indianapolis-in', label: 'Indianapolis, IN', lat: 39.7684, lon: -86.1581 },
+  { value: 'charlotte-nc', label: 'Charlotte, NC', lat: 35.2271, lon: -80.8431 },
+  { value: 'seattle-wa', label: 'Seattle, WA', lat: 47.6062, lon: -122.3321 },
+  { value: 'denver-co', label: 'Denver, CO', lat: 39.7392, lon: -104.9903 },
+  { value: 'boston-ma', label: 'Boston, MA', lat: 42.3601, lon: -71.0589 },
+];
+
 interface OnboardingData {
   fullName: string;
   bitchatUsername: string;
@@ -73,6 +97,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const createVolunteer = useMutation(api.volunteers.create);
+  const { data: session } = authClient.useSession();
 
   const [data, setData] = useState<OnboardingData>({
     fullName: '',
@@ -83,6 +108,16 @@ export default function OnboardingPage() {
     availability: {},
     location: null,
   });
+
+  useEffect(() => {
+    if (session?.user) {
+      setData(prev => ({
+        ...prev,
+        fullName: session.user.name || '',
+        email: session.user.email || '',
+      }));
+    }
+  }, [session]);
 
   const toggleSkill = (skillId: string) => {
     setData((prev) => ({
@@ -129,7 +164,7 @@ export default function OnboardingPage() {
   const canProceed = () => {
     switch (step) {
       case 1:
-        return data.fullName.trim() && data.bitchatUsername.trim();
+        return data.bitchatUsername.trim() !== '';
       case 2:
         return data.skills.length > 0;
       case 3:
@@ -251,16 +286,6 @@ export default function OnboardingPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name *</Label>
-                <Input
-                  id="fullName"
-                  placeholder="Enter your full name"
-                  value={data.fullName}
-                  onChange={(e) => setData({ ...data, fullName: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="bitchat">Communication Handle *</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -281,27 +306,15 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email (Optional)</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={data.email}
-                    onChange={(e) => setData({ ...data, email: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone (Optional)</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+1 (555) 000-0000"
-                    value={data.phone}
-                    onChange={(e) => setData({ ...data, phone: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone (Optional)</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+1 (555) 000-0000"
+                  value={data.phone}
+                  onChange={(e) => setData({ ...data, phone: e.target.value })}
+                />
               </div>
             </CardContent>
           </Card>
@@ -465,20 +478,34 @@ export default function OnboardingPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="address">City or Address</Label>
-                  <Input
-                    id="address"
-                    placeholder="e.g., San Francisco, CA"
-                    value={data.location?.address || ''}
-                    onChange={(e) =>
+                  <Label htmlFor="location">Select Your City</Label>
+                  <Select
+                    value={
+                      data.location 
+                        ? LOCATIONS.find(loc => loc.label === data.location?.address)?.value || ''
+                        : ''
+                    }
+                    onValueChange={(value) => {
+                      const selectedLocation = LOCATIONS.find(loc => loc.value === value);
                       setData({
                         ...data,
-                        location: e.target.value
-                          ? { address: e.target.value, lat: 0, lon: 0 }
+                        location: selectedLocation
+                          ? { address: selectedLocation.label, lat: selectedLocation.lat, lon: selectedLocation.lon }
                           : null,
-                      })
-                    }
-                  />
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LOCATIONS.map((location) => (
+                        <SelectItem key={location.value} value={location.value}>
+                          {location.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
                     Your exact address is never shared with other volunteers
                   </p>
