@@ -73,12 +73,12 @@ extension PeerID {
     }
     
     /// Convenience init to "hide" hex-encoding implementation detail
-    init(hexData: Data) {
+    public init(hexData: Data) {
         self.init(str: hexData.hexEncodedString())
     }
     
     /// Convenience init to "hide" hex-encoding implementation detail
-    init?(hexData: Data?) {
+    public init?(hexData: Data?) {
         guard let hexData else { return nil }
         self.init(hexData: hexData)
     }

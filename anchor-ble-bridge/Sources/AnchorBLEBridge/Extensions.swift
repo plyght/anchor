@@ -30,6 +30,16 @@ extension Data {
         }
         return hash.map { String(format: "%02x", $0) }.joined()
     }
+    
+    public func sha256Hash() -> Data {
+        var hash = Data(count: Int(CC_SHA256_DIGEST_LENGTH))
+        self.withUnsafeBytes { dataBytes in
+            hash.withUnsafeMutableBytes { hashBytes in
+                _ = CC_SHA256(dataBytes.baseAddress, CC_LONG(self.count), hashBytes.baseAddress?.assumingMemoryBound(to: UInt8.self))
+            }
+        }
+        return hash
+    }
 }
 
 struct TransportConfig {

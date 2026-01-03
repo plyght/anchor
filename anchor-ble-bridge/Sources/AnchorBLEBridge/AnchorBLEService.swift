@@ -23,16 +23,51 @@ public class AnchorBLEService: NSObject {
     public var signingPrivateKey: Curve25519.Signing.PrivateKey
     public var onMessageReceived: ((BitchatPacket) -> Void)?
     
+    private let noiseService: NoiseEncryptionService
+    private var pendingDMs: [PeerID: [(content: String, messageID: String)]] = [:]
+    
     public init(peerID: Data, noiseKey: Data, signingKey: Data, nickname: String, signingPrivateKey: Curve25519.Signing.PrivateKey) {
         self.myPeerID = peerID
         self.myNoiseKey = noiseKey
         self.mySigningKey = signingKey
         self.myNickname = nickname
         self.signingPrivateKey = signingPrivateKey
+        self.noiseService = NoiseEncryptionService()
         super.init()
         
         centralManager = CBCentralManager(delegate: self, queue: queue)
         peripheralManager = CBPeripheralManager(delegate: self, queue: queue)
+        
+        noiseService.onHandshakeRequired = { [weak self] peerID in
+            guard let self = self else { return }
+            do {
+                let handshakeData = try self.noiseService.initiateHandshake(with: peerID)
+                var packet = BitchatPacket(
+                    type: 0x10,
+                    senderID: self.myPeerID,
+                    recipientID: Data(hexString: peerID.id),
+                    timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
+                    payload: handshakeData,
+                    signature: nil,
+                    ttl: 7
+                )
+                if let packetDataForSigning = packet.toBinaryDataForSigning() {
+                    let signature = try self.signingPrivateKey.signature(for: packetDataForSigning)
+                    packet.signature = signature
+                }
+                self.broadcastPacket(packet)
+            } catch {
+                SecureLogger.error("Failed to initiate handshake: \(error)", category: .bluetooth)
+            }
+        }
+        
+        noiseService.onSessionEstablished = { [weak self] peerID in
+            guard let self = self, let messages = self.pendingDMs[peerID] else { return }
+            for (content, _) in messages {
+                self.sendPrivateMessage(content, to: Data(hexString: peerID.id) ?? Data())
+            }
+            self.pendingDMs.removeValue(forKey: peerID)
+        }
     }
     
     public func start() {
@@ -88,26 +123,20 @@ public class AnchorBLEService: NSObject {
     }
     
     public func sendMessage(_ content: String, to recipientPeerID: Data? = nil) {
-        let payload: Data
-        
         if let recipientPeerID = recipientPeerID {
-            let messageID = UUID().uuidString
-            let privateMessage = PrivateMessagePacket(messageID: messageID, content: content)
-            
-            guard let tlvPayload = privateMessage.encode() else {
-                SecureLogger.error("Failed to encode private message with TLV", category: .bluetooth)
-                return
-            }
-            
-            payload = tlvPayload
+            sendPrivateMessage(content, to: recipientPeerID)
         } else {
-            payload = Data(content.utf8)
+            sendBroadcastMessage(content)
         }
+    }
+    
+    private func sendBroadcastMessage(_ content: String) {
+        let payload = Data(content.utf8)
         
         var packet = BitchatPacket(
             type: 0x02,
             senderID: myPeerID,
-            recipientID: recipientPeerID,
+            recipientID: nil,
             timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
             payload: payload,
             signature: nil,
@@ -124,6 +153,90 @@ public class AnchorBLEService: NSObject {
         }
         
         broadcastPacket(packet)
+    }
+    
+    private func sendPrivateMessage(_ content: String, to recipientPeerID: Data) {
+        let peerID = PeerID(hexData: recipientPeerID)
+        
+        let messageID = UUID().uuidString
+        
+        if !noiseService.hasEstablishedSession(with: peerID) {
+            if pendingDMs[peerID] == nil {
+                pendingDMs[peerID] = []
+            }
+            pendingDMs[peerID]?.append((content: content, messageID: messageID))
+            initiateHandshakeIfNeeded(with: peerID)
+            return
+        }
+        
+        let privateMessage = PrivateMessagePacket(messageID: messageID, content: content)
+        guard let tlvData = privateMessage.encode() else {
+            SecureLogger.error("Failed to encode private message TLV", category: .bluetooth)
+            return
+        }
+        
+        var messagePayload = Data([0x01])
+        messagePayload.append(tlvData)
+        
+        do {
+            let encrypted = try noiseService.encrypt(messagePayload, for: peerID)
+            
+            var packet = BitchatPacket(
+                type: 0x11,
+                senderID: myPeerID,
+                recipientID: recipientPeerID,
+                timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
+                payload: encrypted,
+                signature: nil,
+                ttl: 7
+            )
+            
+            if let packetDataForSigning = packet.toBinaryDataForSigning() {
+                let signature = try signingPrivateKey.signature(for: packetDataForSigning)
+                packet.signature = signature
+            }
+            
+            broadcastPacket(packet)
+        } catch {
+            SecureLogger.error("Failed to encrypt DM: \(error)", category: .bluetooth)
+        }
+    }
+    
+    private func initiateHandshakeIfNeeded(with peerID: PeerID) {
+        guard !noiseService.hasEstablishedSession(with: peerID) else { return }
+        
+        do {
+            let handshakeData = try noiseService.initiateHandshake(with: peerID)
+            
+            var packet = BitchatPacket(
+                type: 0x10,
+                senderID: myPeerID,
+                recipientID: Data(hexString: peerID.id),
+                timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
+                payload: handshakeData,
+                signature: nil,
+                ttl: 7
+            )
+            
+            if let packetDataForSigning = packet.toBinaryDataForSigning() {
+                let signature = try signingPrivateKey.signature(for: packetDataForSigning)
+                packet.signature = signature
+            }
+            
+            broadcastPacket(packet)
+        } catch {
+            SecureLogger.error("Failed to initiate handshake: \(error)", category: .bluetooth)
+        }
+    }
+    
+    private func sendPendingDMs(to peerID: PeerID) {
+        guard let messages = pendingDMs[peerID], !messages.isEmpty else { return }
+        
+        for (content, _) in messages {
+            sendPrivateMessage(content, to: Data(hexString: peerID.id) ?? Data())
+        }
+        
+        pendingDMs.removeValue(forKey: peerID)
     }
     
     private func broadcastPacket(_ packet: BitchatPacket) {
@@ -174,7 +287,6 @@ public class AnchorBLEService: NSObject {
             withServices: nil,
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
         )
-        SecureLogger.info("Started BLE scanning", category: .bluetooth)
     }
 }
 
@@ -198,14 +310,12 @@ extension AnchorBLEService: CBCentralManagerDelegate {
             return
         }
         
-        SecureLogger.info("🔗 Connecting to \(peripheral.name ?? "Unknown") (RSSI: \(RSSI))", category: .bluetooth)
         peripheral.delegate = self
         connectedPeripherals.append(peripheral)
         central.connect(peripheral, options: nil)
     }
     
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        SecureLogger.info("Connected: \(peripheral.name ?? "Unknown") (\(peripheral.identifier))", category: .bluetooth)
         peripheral.discoverServices([Self.serviceUUID])
     }
     
@@ -241,7 +351,6 @@ extension AnchorBLEService: CBPeripheralManagerDelegate {
     }
     
     public func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
-        SecureLogger.info("Central subscribed: \(central.identifier)", category: .bluetooth)
         subscribedCentrals.append(central)
         
         queue.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -250,7 +359,6 @@ extension AnchorBLEService: CBPeripheralManagerDelegate {
     }
     
     public func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
-        SecureLogger.info("Central unsubscribed: \(central.identifier)", category: .bluetooth)
         subscribedCentrals.removeAll { $0 == central }
     }
     
@@ -259,7 +367,6 @@ extension AnchorBLEService: CBPeripheralManagerDelegate {
             guard let data = request.value else { continue }
             
             if let packet = BitchatPacket.from(data) {
-                SecureLogger.info("RX packet from \(packet.senderID.hexEncodedString())", category: .bluetooth)
                 onMessageReceived?(packet)
             }
             

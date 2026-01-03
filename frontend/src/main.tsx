@@ -7,6 +7,7 @@ import { convex } from './lib/convex.ts'
 import { wakeupBackend } from './lib/backendWakeup.ts'
 import { authClient } from './lib/auth-client'
 import { ThemeProvider } from './components/ThemeProvider'
+import { cleanOldAuthState } from './lib/cleanOldAuth'
 
 function Root() {
   const [backendReady, setBackendReady] = useState(false);
@@ -17,6 +18,11 @@ function Root() {
     console.log('[Root] Initializing app...');
     console.log('[Root] VITE_CONVEX_URL:', import.meta.env.VITE_CONVEX_URL);
     console.log('[Root] VITE_API_URL:', import.meta.env.VITE_API_URL);
+    
+    const hadOldAuth = cleanOldAuthState();
+    if (hadOldAuth) {
+      console.log('[Root] Old auth state cleared. User will need to sign in again.');
+    }
     
     const apiUrl = import.meta.env.VITE_API_URL;
     
