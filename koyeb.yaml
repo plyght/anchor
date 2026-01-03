@@ -4,7 +4,7 @@ services:
     type: web
     build:
       builder: buildpack
-      buildCommand: npm install -g bun && cd backend && bun install && npm run build
+      buildCommand: npm install -g bun && cd backend && bun install && bun run build
     run:
       command: cd backend && npm run start:node
     ports:
