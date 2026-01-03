@@ -123,6 +123,36 @@ Anchor uses [Convex Auth](https://labs.convex.dev/auth) for authentication, whic
 - Session management handled by Convex
 - No external auth service needed
 
+### JWT Setup (Required)
+
+Convex Auth requires `JWT_PRIVATE_KEY` and `JWKS` environment variables to be set in your Convex deployment.
+
+**Generate the keys:**
+
+```bash
+# Install jose if needed
+bun add -d jose
+
+# Generate keys
+bun run generateKeys.mjs
+```
+
+This will output two environment variables. Set them in Convex:
+
+**Option 1: Using Convex CLI**
+```bash
+bunx convex env set JWT_PRIVATE_KEY "your-private-key-value"
+bunx convex env set JWKS '{"keys":[...]}'
+```
+
+**Option 2: Using Convex Dashboard**
+1. Go to [Convex Dashboard](https://dashboard.convex.dev)
+2. Select your project
+3. Navigate to **Settings** → **Environment Variables**
+4. Add `JWT_PRIVATE_KEY` and `JWKS` with the generated values
+
+**Important**: Set these for both development and production environments if deploying to production.
+
 ### Adding OAuth Providers:
 
 To add OAuth (GitHub, Google, etc.), update `convex/auth.ts`:

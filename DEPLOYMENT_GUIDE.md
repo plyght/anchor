@@ -31,6 +31,35 @@ Both frontend (Vercel) and backend (Koyeb) are configured and ready for producti
 
 **Deploy your Convex functions first** - both frontend and backend depend on this.
 
+#### 1.1: Set Up JWT Keys (Required for Auth)
+
+Convex Auth requires `JWT_PRIVATE_KEY` and `JWKS` environment variables. Generate them:
+
+```bash
+# From project root
+bun add -d jose
+bun run generateKeys.mjs
+```
+
+This outputs two environment variables. Set them in Convex:
+
+**Using Convex CLI:**
+```bash
+bunx convex env set JWT_PRIVATE_KEY "your-private-key-value" --prod
+bunx convex env set JWKS '{"keys":[...]}' --prod
+```
+
+**Or using Convex Dashboard:**
+1. Go to [Convex Dashboard](https://dashboard.convex.dev)
+2. Select your project
+3. Navigate to **Settings** → **Environment Variables**
+4. Select **Production** environment
+5. Add `JWT_PRIVATE_KEY` and `JWKS` with the generated values
+
+**Important**: Set these before deploying, otherwise authentication will fail.
+
+#### 1.2: Deploy Convex Functions
+
 ```bash
 # From project root
 bunx convex deploy --prod
@@ -410,6 +439,10 @@ curl https://your-backend.koyeb.app/health
 **Error**: Login/signup returns error
 
 **Solution**:
+- Verify `JWT_PRIVATE_KEY` and `JWKS` are set in Convex environment variables
+- Generate keys: `bun run generateKeys.mjs`
+- Set them via CLI: `bunx convex env set JWT_PRIVATE_KEY "..." --prod`
+- Or set via Convex Dashboard → Settings → Environment Variables
 - Verify Convex Auth is configured in `convex/auth.ts`
 - Check Convex logs for auth errors
 - Ensure frontend is using correct `VITE_CONVEX_URL`

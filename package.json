@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "convex dev",
-    "postinstall": "cd backend && npm install && npm run build"
+    "postinstall": "cd backend && npm install && npm run build",
+    "generateKeys": "node generateKeys.mjs"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",
     "convex": "^1.31.2"
+  },
+  "devDependencies": {
+    "jose": "^6.1.3"
   }
 }
