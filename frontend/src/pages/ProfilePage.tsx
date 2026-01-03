@@ -18,89 +18,111 @@ export default function ProfilePage() {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Volunteer Profile</h1>
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="border-b border-tactical pb-4">
+          <h1 className="text-4xl font-display font-bold text-white uppercase tracking-wider">
+            Personnel Record
+          </h1>
+          <p className="font-mono text-xs text-neon-blue uppercase tracking-widest mt-1">
+            Unit Configuration & Status
+          </p>
+        </div>
         
-        <form className="bg-white p-6 rounded-lg shadow space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name
-            </label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="John Doe"
-            />
+        <form className="bg-surface border border-tactical p-8 space-y-8 relative overflow-hidden">
+          {/* Decorative corner */}
+          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-neon-blue"></div>
+          
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+                Full Designation
+              </label>
+              <input
+                type="text"
+                className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none"
+                placeholder="Name"
+                defaultValue="Unit #734"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+                BitChat ID
+              </label>
+              <input
+                type="text"
+                className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none"
+                placeholder="@handle"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              BitChat Username
+            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+              Skill Modules (Capabilities)
             </label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="@yourname"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Skills
-            </label>
-            <div className="flex gap-2 mb-2">
+            <div className="flex gap-2 mb-4">
               <input
                 type="text"
                 value={newSkill}
                 onChange={(e) => setNewSkill(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="e.g., first_aid, boat_operator"
+                className="flex-1 bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none"
+                placeholder="ENTER_MODULE_ID"
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
               />
               <button
                 type="button"
                 onClick={addSkill}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                className="bg-neon-blue/10 text-neon-blue border border-neon-blue px-6 hover:bg-neon-blue hover:text-black transition-colors font-mono text-sm uppercase"
               >
-                Add
+                Install
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {skills.map(skill => (
-                <span
-                  key={skill}
-                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                >
-                  {skill}
-                  <button
-                    type="button"
-                    onClick={() => removeSkill(skill)}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
+            
+            <div className="bg-void/50 border border-tactical p-4 min-h-[100px]">
+              {skills.length === 0 ? (
+                <span className="text-gray-600 font-mono text-xs uppercase opacity-50">No modules installed</span>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {skills.map(skill => (
+                    <span
+                      key={skill}
+                      className="bg-neon-blue/5 border border-neon-blue/50 text-neon-blue px-3 py-1 text-xs font-mono uppercase flex items-center gap-3 group hover:bg-neon-blue/20 transition-colors"
+                    >
+                      {skill}
+                      <button
+                        type="button"
+                        onClick={() => removeSkill(skill)}
+                        className="text-neon-blue/50 hover:text-neon-red font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Current Status
+            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+              Operational Status
             </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
-              <option value="available">Available</option>
-              <option value="busy">Busy</option>
-              <option value="offline">Offline</option>
+            <select className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none appearance-none">
+              <option value="available">READY (AVAILABLE)</option>
+              <option value="busy">ENGAGED (BUSY)</option>
+              <option value="offline">OFFLINE</option>
             </select>
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition"
-          >
-            Save Profile
-          </button>
+          <div className="pt-4 border-t border-tactical">
+            <button
+              type="submit"
+              className="w-full bg-white text-black border border-white py-3 font-mono font-bold uppercase tracking-widest hover:bg-neon-blue hover:border-neon-blue transition-all duration-200"
+            >
+              Update Record
+            </button>
+          </div>
         </form>
       </div>
     </Layout>

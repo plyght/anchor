@@ -16,62 +16,76 @@ export default function LoginPage() {
       await signIn('password', { email, password, flow: 'signIn' });
       navigate('/');
     } catch (err) {
-      setError('Invalid email or password');
+      setError('Authentication failed: Invalid credentials');
       console.error('Login error:', err);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-blue-600">
-          ⚓ Anchor Login
-        </h1>
-        <form onSubmit={handleLogin} className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-void p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-scanline opacity-10 pointer-events-none"></div>
+      
+      <div className="bg-surface border border-tactical p-8 w-full max-w-md relative z-10 shadow-glow-blue">
+        <div className="border-b border-tactical pb-4 mb-8 text-center">
+          <h1 className="text-4xl font-display font-bold text-white uppercase tracking-widest mb-1">
+            Anchor
+          </h1>
+          <p className="font-mono text-xs text-neon-blue uppercase tracking-[0.3em]">
+            Secure Access Terminal
+          </p>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-6">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
+            <div className="bg-neon-red/10 border border-neon-red text-neon-red px-4 py-3 font-mono text-sm uppercase">
+              [ERROR]: {error}
             </div>
           )}
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+              Identity (Email)
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="volunteer@example.com"
+              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none transition-colors"
+              placeholder="OPERATOR_ID"
               required
             />
           </div>
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
+            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+              Passcode
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none transition-colors"
               placeholder="••••••••"
               required
             />
           </div>
+
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition font-medium"
+            className="w-full bg-neon-blue text-black border border-neon-blue py-3 font-mono font-bold uppercase tracking-widest hover:bg-white hover:border-white transition-all duration-200 mt-4"
           >
-            Sign In
+            Authenticate
           </button>
         </form>
-        <p className="text-center mt-4 text-sm text-gray-600">
-          Don't have an account?{' '}
-          <Link to="/signup" className="text-blue-600 hover:underline">
-            Sign up
-          </Link>
-        </p>
+
+        <div className="mt-8 text-center border-t border-tactical pt-4">
+          <p className="text-xs font-mono text-gray-500">
+            NO CREDENTIALS?{' '}
+            <Link to="/signup" className="text-neon-blue hover:text-white uppercase decoration-none border-b border-neon-blue hover:border-white transition-colors">
+              Request Access
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

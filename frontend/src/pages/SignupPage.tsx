@@ -25,103 +25,118 @@ export default function SignupPage() {
       });
       navigate('/');
     } catch (err) {
-      setError('Failed to create account. Email may already be in use.');
+      setError('Registration failed: Email conflict or system error');
       console.error('Signup error:', err);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 py-8">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-blue-600">
-          ⚓ Volunteer Signup
-        </h1>
+    <div className="min-h-screen flex items-center justify-center bg-void p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-scanline opacity-10 pointer-events-none"></div>
+
+      <div className="bg-surface border border-tactical p-8 w-full max-w-md relative z-10 shadow-glow-blue">
+        <div className="border-b border-tactical pb-4 mb-8 text-center">
+          <h1 className="text-3xl font-display font-bold text-white uppercase tracking-wider mb-1">
+            Unit Registration
+          </h1>
+          <p className="font-mono text-xs text-neon-green uppercase tracking-[0.3em]">
+            New Personnel Onboarding
+          </p>
+        </div>
+
         <form onSubmit={handleSignup} className="space-y-4">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
+            <div className="bg-neon-red/10 border border-neon-red text-neon-red px-4 py-3 font-mono text-sm uppercase">
+              [ERROR]: {error}
             </div>
           )}
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name
+            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+              Full Designation (Name)
             </label>
             <input
               type="text"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="John Doe"
+              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
+              placeholder="e.g. JOHN DOE"
               required
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+              Comms ID (Email)
             </label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="volunteer@example.com"
+              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
+              placeholder="operator@anchor.net"
               required
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
+            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+              Security Key (Password)
             </label>
             <input
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
               placeholder="••••••••"
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              BitChat Username
-            </label>
-            <input
-              type="text"
-              value={formData.bitchatUsername}
-              onChange={(e) => setFormData({ ...formData, bitchatUsername: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="@yourname"
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Your BitChat username (download app first)
-            </p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+                BitChat Handle
+              </label>
+              <input
+                type="text"
+                value={formData.bitchatUsername}
+                onChange={(e) => setFormData({ ...formData, bitchatUsername: e.target.value })}
+                className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
+                placeholder="@handle"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
+                Frequency (Phone)
+              </label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
+                placeholder="(Optional)"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone (Optional)
-            </label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="(555) 123-4567"
-            />
-          </div>
+
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition font-medium"
+            className="w-full bg-neon-green text-black border border-neon-green py-3 font-mono font-bold uppercase tracking-widest hover:bg-white hover:border-white transition-all duration-200 mt-6"
           >
-            Create Account
+            Initialize Unit
           </button>
         </form>
-        <p className="text-center mt-4 text-sm text-gray-600">
-          Already have an account?{' '}
-          <Link to="/login" className="text-blue-600 hover:underline">
-            Sign in
-          </Link>
-        </p>
+
+        <div className="mt-8 text-center border-t border-tactical pt-4">
+          <p className="text-xs font-mono text-gray-500">
+            EXISTING UNIT?{' '}
+            <Link to="/login" className="text-neon-green hover:text-white uppercase decoration-none border-b border-neon-green hover:border-white transition-colors">
+              Access Terminal
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

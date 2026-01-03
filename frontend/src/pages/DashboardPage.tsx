@@ -13,45 +13,82 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition">
-            🚨 Create Emergency Incident
+      <div className="space-y-8">
+        <div className="flex justify-between items-end border-b border-tactical pb-4">
+          <div>
+            <h1 className="text-4xl font-display font-bold text-white uppercase tracking-wider">
+              Operational Status
+            </h1>
+            <p className="text-neon-blue font-mono text-sm mt-1 tracking-widest">
+              SYSTEM ONLINE // MONITORING ACTIVE
+            </p>
+          </div>
+          <button className="bg-neon-red/10 text-neon-red border border-neon-red px-6 py-2 hover:bg-neon-red hover:text-black transition-all duration-200 font-mono text-sm uppercase tracking-wider">
+            Report Incident
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Active Incidents</h3>
-            <p className="text-4xl font-bold text-blue-600 mt-2">{activeIncidents?.length ?? 0}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-surface border border-tactical p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
+              <div className="w-16 h-16 border-2 border-neon-blue rounded-full border-dashed animate-spin-slow"></div>
+            </div>
+            <h3 className="font-mono text-xs uppercase text-gray-500 tracking-widest mb-2">Active Incidents</h3>
+            <p className="text-5xl font-display font-bold text-neon-blue">
+              {(activeIncidents?.length ?? 0).toString().padStart(2, '0')}
+            </p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Pending Tasks</h3>
-            <p className="text-4xl font-bold text-yellow-600 mt-2">{pendingTasks?.length ?? 0}</p>
+          
+          <div className="bg-surface border border-tactical p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-1 h-full bg-neon-amber/20"></div>
+            <h3 className="font-mono text-xs uppercase text-gray-500 tracking-widest mb-2">Pending Tasks</h3>
+            <p className="text-5xl font-display font-bold text-neon-amber">
+              {(pendingTasks?.length ?? 0).toString().padStart(2, '0')}
+            </p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Available Volunteers</h3>
-            <p className="text-4xl font-bold text-green-600 mt-2">{availableVolunteers?.length ?? 0}</p>
+
+          <div className="bg-surface border border-tactical p-6 relative overflow-hidden group">
+             <div className="absolute top-0 right-0 w-1 h-full bg-neon-green/20"></div>
+            <h3 className="font-mono text-xs uppercase text-gray-500 tracking-widest mb-2">Personnel Online</h3>
+            <p className="text-5xl font-display font-bold text-neon-green">
+              {(availableVolunteers?.length ?? 0).toString().padStart(2, '0')}
+            </p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Incidents</h2>
+        <div className="border border-tactical bg-surface">
+          <div className="p-4 border-b border-tactical flex justify-between items-center bg-void/50">
+            <h2 className="text-xl font-display font-bold text-white uppercase tracking-wide">
+              Recent Activity Log
+            </h2>
+            <span className="text-xs font-mono text-neon-blue animate-pulse">LIVE FEED</span>
+          </div>
+          
           {!activeIncidents || activeIncidents.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No incidents yet</p>
+            <div className="p-12 text-center text-gray-600 font-mono text-sm uppercase">
+              No active incidents detected
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-tactical">
               {activeIncidents.map((incident: { _id: string; title: string; incident_type: string; _creationTime: number }) => (
                 <div
                   key={incident._id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
                 >
-                  <div>
-                    <h3 className="font-medium text-gray-900">{incident.title}</h3>
-                    <p className="text-sm text-gray-500">
-                      {incident.incident_type} • {new Date(incident._creationTime).toLocaleString()}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-mono text-neon-red border border-neon-red/30 px-1">ALERT</span>
+                      <h3 className="font-display font-bold text-lg text-white group-hover:text-neon-blue transition-colors">
+                        {incident.title}
+                      </h3>
+                    </div>
+                    <p className="text-xs font-mono text-gray-500 uppercase tracking-wide pl-12">
+                      TYPE: {incident.incident_type} <span className="mx-2 text-gray-700">|</span> 
+                      T-{Math.floor((Date.now() - incident._creationTime) / 1000 / 60)} MIN
                     </p>
+                  </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="font-mono text-xs text-neon-blue">VIEW_DETAILS &gt;</span>
                   </div>
                 </div>
               ))}

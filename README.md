@@ -14,7 +14,7 @@ Anchor coordinates emergency response volunteers through a token-gated task syst
 - **Real-Time Coordination**: Live dashboard updates via Convex reactive queries
 - **Audit Trail**: Complete system history for compliance and post-incident analysis
 - **Escalation System**: Automatic task reassignment when volunteers don't respond
-- **Bridge Architecture**: Convex scheduled functions connect web app to mesh network
+- **Bridge Architecture**: HTTP polling bridge connects web app to mesh network
 
 ## Installation
 
@@ -22,7 +22,7 @@ Anchor coordinates emergency response volunteers through a token-gated task syst
 - Bun 1.0+
 - Convex account (sign up at https://convex.dev)
 - BitChat iOS/Android app for volunteers
-- Rust 1.70+ (for bridge component)
+- Rust 1.85+ (for bridge component at ~/bitchat-terminal)
 
 ### Convex Setup
 
@@ -67,6 +67,27 @@ bun dev
 
 Frontend runs on http://localhost:5173
 
+### Bridge Setup (BitChat Integration)
+
+```bash
+cd ~/bitchat-terminal
+
+# Create .env
+cat > .env <<EOF
+CONVEX_URL=$(grep CONVEX_URL ~/anchor/.env.local | cut -d '=' -f2)
+BRIDGE_MODE=true
+POLL_INTERVAL_SECS=5
+EOF
+
+# Build
+cargo build --release
+
+# Run (requires sudo for Bluetooth)
+sudo -E ./target/release/bitchat --bridge
+```
+
+See [Bridge Integration Guide](docs/CONVEX_BRIDGE_INTEGRATION.md) for full details.
+
 ## Usage
 
 ### Creating an Incident
@@ -100,6 +121,13 @@ const matchIncident = useMutation(api.matching.matchIncident);
 const result = await matchIncident({ incident_id: incidentId });
 ```
 
+### Dispatching to Mesh
+
+1. Tasks are created with `status='pending'`
+2. Admin clicks "Dispatch" in UI → updates to `status='dispatched'`
+3. Bridge polls Convex, finds dispatched tasks
+4. Bridge broadcasts to BitChat mesh network
+
 ### Volunteer Response Flow
 
 Tasks dispatched to mesh show: `TASK#3: Check levee B5 | Code: X7Y2`
@@ -111,7 +139,7 @@ X7Y2 D     # Decline task
 X7Y2 DONE  # Mark complete
 ```
 
-Bridge validates code and updates database automatically.
+Bridge validates code and updates Convex automatically.
 
 ## Authentication
 
@@ -184,6 +212,14 @@ CONVEX_URL=https://your-project.convex.cloud
 CONVEX_DEPLOY_KEY=your-convex-deploy-key
 ```
 
+### Bridge Environment (bitchat-terminal)
+
+```env
+CONVEX_URL=https://your-project.convex.cloud
+BRIDGE_MODE=true
+POLL_INTERVAL_SECS=5
+```
+
 ## Architecture
 
 ### System Layers
@@ -192,8 +228,8 @@ CONVEX_DEPLOY_KEY=your-convex-deploy-key
 Web App (React + Bun)
     ↓
 Convex (Reactive Database + Functions)
-    ↓ (Scheduled Functions)
-Bridge Process (Rust)
+    ↓ (HTTP Polling)
+Bridge Process (Rust - bitchat-terminal)
     ↓ (Bluetooth LE)
 BitChat Mesh Network (iOS/Android)
 ```
@@ -218,19 +254,22 @@ Convex schema defined in `convex/schema.ts`:
 - `convex/escalation.ts`: Timeout-based task reassignment (scheduled)
 - `convex/audit.ts`: System audit trail generation
 - `convex/crons.ts`: Scheduled escalation checks
+- `convex/task_assignments.ts`: Volunteer response tracking
+- `convex/mesh_messages.ts`: Mesh network message logging
 - `frontend/src/pages/`: Dashboard, incident, and volunteer management UIs
 
 ### Bridge Integration
 
 The bridge process connects web infrastructure to mesh network:
 
-1. Convex scheduled functions check for dispatched tasks
-2. Tasks with `status='dispatched'` trigger bridge notification
-3. Bridge forwards task to BitChat mesh network
-4. Bridge parses volunteer response codes
-5. Bridge updates Convex with task status changes
+1. Bridge polls Convex every N seconds for tasks with `status='dispatched'`
+2. Bridge formats and broadcasts tasks to BitChat mesh network
+3. Bridge receives volunteer response codes from mesh
+4. Bridge validates codes and updates Convex with task status
+5. Web app reflects changes in real-time via Convex reactive queries
 
-Implementation: `docs/bridge-implementation-plan.md`
+**Bridge Location:** `~/bitchat-terminal` (separate repository)  
+**Integration Docs:** [docs/CONVEX_BRIDGE_INTEGRATION.md](docs/CONVEX_BRIDGE_INTEGRATION.md)
 
 ## Development
 
@@ -258,6 +297,14 @@ cd frontend
 bun dev
 ```
 
+### Bridge Development
+
+```bash
+cd ~/bitchat-terminal
+cargo build --release
+sudo -E ./target/release/bitchat --bridge -d
+```
+
 ### Testing
 
 ```bash
@@ -268,6 +315,10 @@ bun test
 # Frontend
 cd frontend
 bun test
+
+# Bridge integration
+cd ~/anchor
+bun test test/bridge-integration.test.ts
 ```
 
 ## Tech Stack
@@ -279,7 +330,7 @@ bun test
 - Frontend: React + Vite + Convex React hooks
 - Styling: TailwindCSS
 - Mesh Network: BitChat (Bluetooth LE)
-- Bridge: Rust (bitchat-terminal fork)
+- Bridge: Rust (bitchat-terminal at ~/bitchat-terminal)
 
 Dependencies: convex, @convex-dev/auth, hono, react-router-dom, zustand.
 
@@ -295,17 +346,21 @@ Dependencies: convex, @convex-dev/auth, hono, react-router-dom, zustand.
 - `api.tasks.list` - List tasks (filterable by status/incident)
 - `api.tasks.get` - Get task by ID
 - `api.matching.matchTasksToVolunteers` - Calculate matches
+- `api.task_assignments.listByTask` - Get responses for task
+- `api.mesh_messages.listByTask` - Get mesh logs for task
 
 ### Mutations (Write)
 - `api.volunteers.create` - Create volunteer
 - `api.volunteers.update` - Update volunteer
 - `api.incidents.create` - Create incident
 - `api.tasks.create` - Create task
-- `api.tasks.update` - Update task
+- `api.tasks.update` - Update task (including status → 'dispatched')
 - `api.tasks.generateForIncident` - Generate default tasks
 - `api.matching.assignTaskToVolunteer` - Assign task
 - `api.matching.matchIncident` - Match and assign all tasks
 - `api.audit.logAuditEvent` - Log audit event
+- `api.task_assignments.create` - Record volunteer response
+- `api.mesh_messages.create` - Log mesh message
 
 ### Scheduled Functions
 - `internal.escalation.checkAndEscalateTasks` - Runs every minute via cron
@@ -317,6 +372,7 @@ Dependencies: convex, @convex-dev/auth, hono, react-router-dom, zustand.
 - Acceptance codes prevent unauthorized task claiming
 - Authentication handled by Convex Auth with secure session management
 - Password hashing and secure storage built into Convex Auth
+- Bridge uses Convex public HTTP API (add authentication if needed)
 
 ## Migration from Supabase
 
@@ -327,6 +383,7 @@ This project has been migrated from Supabase to Convex. Key changes:
 3. **Backend API**: REST endpoints → Convex queries/mutations
 4. **Scheduled Jobs**: PostgreSQL triggers → Convex cron jobs
 5. **Type Safety**: Manual types → Auto-generated Convex types
+6. **Bridge Integration**: PostgreSQL LISTEN/NOTIFY → HTTP polling
 
 ## Deployment
 
@@ -388,16 +445,22 @@ bunx convex deploy --prod
 
 Use the production `CONVEX_URL` in both frontend and backend environment variables.
 
+### Bridge Deployment
+
+See [Bridge Integration Guide](docs/CONVEX_BRIDGE_INTEGRATION.md#production-deployment) for systemd service setup.
+
 ### Post-Deployment Checklist
 
 - [ ] Convex functions deployed to production
 - [ ] Backend deployed to Koyeb with correct environment variables
 - [ ] Frontend deployed to Vercel with correct environment variables
-- [ ] Database provisioned and accessible
+- [ ] Bridge running on dedicated device (Raspberry Pi, Linux server)
 - [ ] Health check endpoint responds: `https://your-backend.koyeb.app/health`
 - [ ] Frontend loads and connects to Convex
 - [ ] Auth flow works end-to-end
 - [ ] Test incident creation and task generation
+- [ ] Test task dispatch to mesh network
+- [ ] Test volunteer response from mesh
 
 ### Monitoring
 
@@ -405,6 +468,7 @@ Use the production `CONVEX_URL` in both frontend and backend environment variabl
 - **Convex Dashboard**: Monitor function calls, logs, and database queries
 - **Vercel Dashboard**: Monitor deployments and analytics
 - **Koyeb Dashboard**: Monitor backend logs and performance
+- **Bridge Logs**: `sudo journalctl -u bitchat-bridge -f`
 
 ## License
 

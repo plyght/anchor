@@ -24,8 +24,10 @@ export default function IncidentDetailPage() {
   if (!incident) {
     return (
       <Layout>
-        <div className="text-center py-8">
-          <p className="text-gray-500">Loading incident...</p>
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="text-neon-blue font-mono text-sm animate-pulse">
+            ACCESSING SECURE DATA_
+          </div>
         </div>
       </Layout>
     );
@@ -33,95 +35,146 @@ export default function IncidentDetailPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{incident.title}</h1>
-          <p className="text-gray-500 mt-1">
-            Created {new Date(incident._creationTime).toLocaleString()}
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Incident Details</h2>
-          <dl className="grid grid-cols-2 gap-4">
+      <div className="space-y-8">
+        <div className="border-b border-tactical pb-4">
+          <div className="flex justify-between items-start">
             <div>
-              <dt className="text-sm font-medium text-gray-500">Type</dt>
-              <dd className="mt-1 text-sm text-gray-900">{incident.incident_type}</dd>
+              <h1 className="text-4xl font-display font-bold text-white uppercase tracking-wider">
+                {incident.title}
+              </h1>
+              <p className="font-mono text-xs text-gray-500 mt-2 uppercase tracking-widest">
+                INCIDENT ID: {incident._id} // T-{Math.floor((Date.now() - incident._creationTime) / 1000 / 60)}M
+              </p>
             </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Severity</dt>
-              <dd className="mt-1">
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  incident.severity === 'critical' ? 'bg-red-100 text-red-800' :
-                  incident.severity === 'high' ? 'bg-orange-100 text-orange-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {incident.severity}
-                </span>
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Status</dt>
-              <dd className="mt-1">
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  incident.status === 'active' ? 'bg-green-100 text-green-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {incident.status}
-                </span>
-              </dd>
-            </div>
-            {incident.trigger_data && typeof incident.trigger_data === 'object' && 'water_level' in incident.trigger_data && (
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Water Level</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {String(incident.trigger_data.water_level)} ft
-                  {'threshold' in incident.trigger_data && incident.trigger_data.threshold && ` (threshold: ${String(incident.trigger_data.threshold)} ft)`}
-                </dd>
+            <div className="text-right">
+              <div className={`inline-block px-3 py-1 text-sm font-bold font-mono uppercase tracking-wide border ${
+                 incident.status === 'active' 
+                 ? 'bg-neon-red text-black border-neon-red animate-pulse' 
+                 : 'bg-gray-800 text-gray-400 border-gray-700'
+              }`}>
+                {incident.status}
               </div>
-            )}
-          </dl>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Tasks</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="col-span-2 space-y-6">
+            <div className="bg-surface border border-tactical p-6 relative">
+              <div className="absolute top-0 left-0 w-2 h-2 bg-white"></div>
+              <div className="absolute top-0 right-0 w-2 h-2 bg-white"></div>
+              <div className="absolute bottom-0 left-0 w-2 h-2 bg-white"></div>
+              <div className="absolute bottom-0 right-0 w-2 h-2 bg-white"></div>
+              
+              <h2 className="text-sm font-mono text-neon-blue uppercase tracking-widest mb-6 border-b border-tactical/50 pb-2">
+                Mission Parameters
+              </h2>
+              
+              <dl className="grid grid-cols-2 gap-y-6 gap-x-4">
+                <div>
+                  <dt className="text-xs font-mono text-gray-500 uppercase">Incident Type</dt>
+                  <dd className="mt-1 text-xl font-display text-white uppercase">{incident.incident_type}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-mono text-gray-500 uppercase">Threat Level</dt>
+                  <dd className="mt-1">
+                    <span className={`text-xl font-display uppercase ${
+                      incident.severity === 'critical' ? 'text-neon-red font-bold' :
+                      incident.severity === 'high' ? 'text-neon-amber' :
+                      'text-neon-blue'
+                    }`}>
+                      {incident.severity}
+                    </span>
+                  </dd>
+                </div>
+                {incident.trigger_data && typeof incident.trigger_data === 'object' && 'water_level' in incident.trigger_data && (
+                  <div className="col-span-2 bg-void/30 p-4 border border-tactical">
+                    <dt className="text-xs font-mono text-gray-500 uppercase mb-2">Telemetry Data</dt>
+                    <dd className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="block text-xs text-gray-600 uppercase">Current Level</span>
+                        <span className="text-2xl font-mono text-white">{String(incident.trigger_data.water_level)} FT</span>
+                      </div>
+                      {'threshold' in incident.trigger_data && incident.trigger_data.threshold && (
+                        <div>
+                           <span className="block text-xs text-gray-600 uppercase">Threshold</span>
+                           <span className="text-2xl font-mono text-neon-red">{String(incident.trigger_data.threshold)} FT</span>
+                        </div>
+                      )}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </div>
+
+          <div className="col-span-1">
+            <div className="bg-surface border border-tactical h-full p-6">
+               <h2 className="text-sm font-mono text-neon-blue uppercase tracking-widest mb-6 border-b border-tactical/50 pb-2">
+                Action Required
+              </h2>
+               <div className="text-center py-8">
+                 <button className="w-full bg-neon-red/10 text-neon-red border border-neon-red py-4 font-mono font-bold uppercase hover:bg-neon-red hover:text-black transition-all">
+                   Deploy Unit
+                 </button>
+                 <p className="mt-4 text-xs font-mono text-gray-500">
+                   AWAITING DISPATCH CONFIRMATION
+                 </p>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface border border-tactical">
+          <div className="p-4 border-b border-tactical flex justify-between items-center bg-void/30">
+            <h2 className="text-lg font-display font-bold text-white uppercase tracking-wide">
+              Task Orders
+            </h2>
             <button
               onClick={handleGenerateTasks}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+              className="text-xs font-mono text-neon-blue border border-neon-blue px-3 py-1 hover:bg-neon-blue hover:text-black uppercase transition-colors"
             >
-              Generate Tasks
+              Generate Protocols
             </button>
           </div>
 
           {!tasks || tasks.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No tasks yet</p>
+            <div className="p-12 text-center text-gray-600 font-mono text-sm uppercase">
+              No tasks assigned to this sector
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-tactical">
               {tasks.map((task: { _id: string; title: string; status: string; priority: string }) => (
                 <div
                   key={task._id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
                 >
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{task.title}</h3>
-                    <div className="flex gap-2 mt-1">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        task.status === 'accepted' ? 'bg-blue-100 text-blue-800' :
-                        task.status === 'dispatched' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className={`w-1.5 h-1.5 rounded-none ${
+                        task.priority === 'urgent' ? 'bg-neon-red' : 'bg-neon-blue'
+                      }`}></span>
+                      <h3 className="font-mono text-sm font-bold text-white uppercase tracking-wide">{task.title}</h3>
+                    </div>
+                    <div className="flex gap-2 pl-4">
+                      <span className={`text-[10px] font-mono uppercase px-1 border ${
+                        task.status === 'completed' ? 'border-neon-green text-neon-green' :
+                        task.status === 'accepted' ? 'border-neon-blue text-neon-blue' :
+                        task.status === 'dispatched' ? 'border-neon-amber text-neon-amber' :
+                        'border-gray-600 text-gray-500'
                       }`}>
-                        {task.status}
+                        [{task.status}]
                       </span>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                        task.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                        'bg-gray-100 text-gray-800'
+                      <span className={`text-[10px] font-mono uppercase px-1 border ${
+                        task.priority === 'urgent' ? 'border-neon-red text-neon-red' :
+                        'border-gray-600 text-gray-500'
                       }`}>
-                        {task.priority}
+                        PRIORITY::{task.priority}
                       </span>
                     </div>
+                  </div>
+                  <div className="font-mono text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                    ID_#{task._id.substring(0,6)}
                   </div>
                 </div>
               ))}

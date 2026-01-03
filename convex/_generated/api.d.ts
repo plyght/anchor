@@ -14,6 +14,8 @@ import type * as crons from "../crons.js";
 import type * as escalation from "../escalation.js";
 import type * as incidents from "../incidents.js";
 import type * as matching from "../matching.js";
+import type * as mesh_messages from "../mesh_messages.js";
+import type * as task_assignments from "../task_assignments.js";
 import type * as tasks from "../tasks.js";
 import type * as volunteers from "../volunteers.js";
 
@@ -30,6 +32,8 @@ declare const fullApi: ApiFromModules<{
   escalation: typeof escalation;
   incidents: typeof incidents;
   matching: typeof matching;
+  mesh_messages: typeof mesh_messages;
+  task_assignments: typeof task_assignments;
   tasks: typeof tasks;
   volunteers: typeof volunteers;
 }>;
