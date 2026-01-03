@@ -1,6 +1,7 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 function generateAcceptanceCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -281,64 +282,96 @@ export const update = mutation({
   },
 });
 
-export const generateForIncident = mutation({
+export const generateForIncident = action({
   args: {
     incident_id: v.id("incidents"),
+    use_ai: v.optional(v.boolean()),
   },
   returns: v.array(v.id("tasks")),
   handler: async (ctx, args) => {
-    const floodTasks = [
-      {
-        title: "Check levee integrity",
-        description: "Inspect levee for cracks and structural damage",
-        task_type: "assessment" as const,
-        priority: "urgent" as const,
-        required_skills: ["inspection", "engineering"],
-      },
-      {
-        title: "Assess property damage",
-        description: "Document water damage to residential properties",
-        task_type: "assessment" as const,
-        priority: "high" as const,
-        required_skills: ["inspection", "documentation"],
-      },
-      {
-        title: "Distribute sandbags",
-        description: "Deliver and place sandbags at critical locations",
-        task_type: "supplies" as const,
-        priority: "high" as const,
-        required_skills: ["heavy_lifting", "driving"],
-      },
-      {
-        title: "Document water levels",
-        description: "Take photos and measurements of current water levels",
-        task_type: "assessment" as const,
-        priority: "medium" as const,
-        required_skills: ["documentation"],
-      },
-    ];
+    const incident = await ctx.runQuery(api.incidents.get, { id: args.incident_id });
+    if (!incident) {
+      throw new Error("Incident not found");
+    }
+
+    let tasksToCreate: Array<{
+      title: string;
+      description: string;
+      task_type: "assessment" | "rescue" | "medical" | "evacuation" | "supplies" | "communication" | "coordination";
+      priority: "low" | "medium" | "high" | "urgent";
+      required_skills: string[];
+    }> = [];
+
+    if (args.use_ai) {
+      const taskTypes = ["assessment", "rescue", "medical", "supplies", "communication"];
+      for (const taskType of taskTypes) {
+        try {
+          const aiTask = await ctx.runAction(api.ai_routing.generateTaskDescription, {
+            incident_title: incident.title,
+            incident_type: incident.incident_type,
+            incident_description: incident.description,
+            task_type: taskType,
+          });
+          
+          if (aiTask && aiTask.title) {
+            tasksToCreate.push({
+              title: aiTask.title,
+              description: aiTask.description,
+              task_type: taskType as any,
+              priority: aiTask.priority,
+              required_skills: aiTask.required_skills,
+            });
+          }
+        } catch (error) {
+          console.error(`AI task generation failed for ${taskType}:`, error);
+        }
+      }
+    }
+
+    if (tasksToCreate.length === 0) {
+      const floodTasks = [
+        {
+          title: "Check levee integrity",
+          description: "Inspect levee for cracks and structural damage",
+          task_type: "assessment" as const,
+          priority: "urgent" as const,
+          required_skills: ["inspection", "engineering"],
+        },
+        {
+          title: "Assess property damage",
+          description: "Document water damage to residential properties",
+          task_type: "assessment" as const,
+          priority: "high" as const,
+          required_skills: ["inspection", "documentation"],
+        },
+        {
+          title: "Distribute sandbags",
+          description: "Deliver and place sandbags at critical locations",
+          task_type: "supplies" as const,
+          priority: "high" as const,
+          required_skills: ["heavy_lifting", "driving"],
+        },
+        {
+          title: "Document water levels",
+          description: "Take photos and measurements of current water levels",
+          task_type: "assessment" as const,
+          priority: "medium" as const,
+          required_skills: ["documentation"],
+        },
+      ];
+      tasksToCreate = floodTasks;
+    }
 
     const taskIds: Array<Id<"tasks">> = [];
-    for (const task of floodTasks) {
-      let code = generateAcceptanceCode();
-      const existing = await ctx.db
-        .query("tasks")
-        .filter((q) => q.eq(q.field("acceptance_code"), code))
-        .first();
-      if (existing) {
-        code = generateAcceptanceCode();
-      }
-
-      const taskId = await ctx.db.insert("tasks", {
+    for (const task of tasksToCreate) {
+      const taskId = await ctx.runMutation(api.tasks.create, {
         incident_id: args.incident_id,
         title: task.title,
         description: task.description,
         task_type: task.task_type,
         priority: task.priority,
         required_skills: task.required_skills,
-        acceptance_code: code,
         status: "pending",
-        escalation_count: 0,
       });
       taskIds.push(taskId);
     }

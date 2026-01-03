@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -299,6 +299,97 @@ export const matchIncident = mutation({
         match_score: a.score,
       })),
       unmatched_task_ids: matchResult.unmatched,
+    };
+  },
+});
+
+export const matchIncidentWithAI = action({
+  args: {
+    incident_id: v.id("incidents"),
+    use_ai_fallback: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    matched: v.number(),
+    unmatched: v.number(),
+    ai_assisted: v.number(),
+    assignments: v.array(
+      v.object({
+        task_id: v.id("tasks"),
+        volunteer_id: v.id("volunteers"),
+        match_score: v.number(),
+        match_method: v.string(),
+      })
+    ),
+    unmatched_task_ids: v.array(v.id("tasks")),
+  }),
+  handler: async (ctx, args) => {
+    const matchResult: {
+      assignments: Array<{ task_id: Id<"tasks">; volunteer_id: Id<"volunteers">; score: number }>;
+      unmatched: Id<"tasks">[];
+    } = await ctx.runQuery(api.matching.matchTasksToVolunteers, {
+      incident_id: args.incident_id,
+    });
+
+    const finalAssignments: Array<{
+      task_id: Id<"tasks">;
+      volunteer_id: Id<"volunteers">;
+      match_score: number;
+      match_method: string;
+    }> = [];
+
+    for (const assignment of matchResult.assignments) {
+      await ctx.runMutation(api.matching.assignTaskToVolunteer, {
+        task_id: assignment.task_id,
+        volunteer_id: assignment.volunteer_id,
+      });
+      finalAssignments.push({
+        task_id: assignment.task_id,
+        volunteer_id: assignment.volunteer_id,
+        match_score: assignment.score,
+        match_method: "rule_based",
+      });
+    }
+
+    let aiAssistedCount = 0;
+    const stillUnmatched: Id<"tasks">[] = [];
+
+    if (args.use_ai_fallback && matchResult.unmatched.length > 0) {
+      for (const unmatchedTaskId of matchResult.unmatched) {
+        try {
+          const aiMatch = await ctx.runAction(api.ai_routing.matchVolunteerToTask, {
+            task_id: unmatchedTaskId,
+          });
+
+          if (aiMatch.best_match) {
+            await ctx.runMutation(api.matching.assignTaskToVolunteer, {
+              task_id: unmatchedTaskId,
+              volunteer_id: aiMatch.best_match.volunteer_id as Id<"volunteers">,
+            });
+            finalAssignments.push({
+              task_id: unmatchedTaskId,
+              volunteer_id: aiMatch.best_match.volunteer_id as Id<"volunteers">,
+              match_score: aiMatch.best_match.confidence * 100,
+              match_method: "ai_assisted",
+            });
+            aiAssistedCount++;
+          } else {
+            stillUnmatched.push(unmatchedTaskId);
+          }
+        } catch (error) {
+          console.error(`AI matching failed for task ${unmatchedTaskId}:`, error);
+          stillUnmatched.push(unmatchedTaskId);
+        }
+      }
+    } else {
+      stillUnmatched.push(...matchResult.unmatched);
+    }
+
+    return {
+      matched: finalAssignments.length,
+      unmatched: stillUnmatched.length,
+      ai_assisted: aiAssistedCount,
+      assignments: finalAssignments,
+      unmatched_task_ids: stillUnmatched,
     };
   },
 });

@@ -11,10 +11,44 @@ Anchor coordinates emergency response volunteers through a token-gated task syst
 - **Infrastructure-Independent**: Operates over Bluetooth LE mesh when internet/cellular networks are unavailable
 - **Token-Gated Tasks**: 4-character acceptance codes prevent unauthorized task claiming
 - **Intelligent Matching**: Skills-based task assignment with availability and location awareness
+- **AI-Powered Coordination**: Optional AI features for task generation, volunteer matching, and message routing
 - **Real-Time Coordination**: Live dashboard updates via Convex reactive queries
 - **Audit Trail**: Complete system history for compliance and post-incident analysis
 - **Escalation System**: Automatic task reassignment when volunteers don't respond
 - **Bridge Architecture**: HTTP polling bridge connects web app to mesh network
+
+## AI Integration
+
+Anchor includes optional AI-powered features using OpenAI for intelligent coordination:
+
+- **🤖 Dynamic Task Generation**: AI creates contextually relevant tasks based on incident details (vs hardcoded templates)
+- **🎯 Smart Volunteer Matching**: AI assists with difficult-to-match tasks when rule-based matching fails
+- **📨 Emergency Message Routing**: Automatically analyze and route incoming mesh messages to appropriate volunteers
+
+**Quick Start:**
+
+```typescript
+// Enable AI for task generation
+const tasks = await generateForIncident({ incident_id, use_ai: true });
+
+// Use AI for difficult matches
+const result = await matchIncidentWithAI({ incident_id, use_ai_fallback: true });
+
+// Process emergency message with AI
+const analysis = await processEmergencyMessage({ 
+  message: "Medical emergency at Main St", 
+  incident_id,
+  auto_assign: true 
+});
+```
+
+**Setup:** Set OpenAI API key in Convex environment:
+
+```bash
+bunx convex env set OPENAI_API_KEY "sk-..."
+```
+
+📖 **Full Documentation**: [docs/AI_INTEGRATION.md](docs/AI_INTEGRATION.md)
 
 ## Installation
 

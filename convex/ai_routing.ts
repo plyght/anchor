@@ -1,6 +1,7 @@
 import { action, query } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -40,6 +41,29 @@ interface RoutingResult {
   confidence: number;
   reasoning: string;
   matched_skills: string[];
+}
+
+async function validateVolunteerId(ctx: any, volunteerId: string): Promise<boolean> {
+  try {
+    const volunteer = await ctx.runQuery(api.volunteers.get, { id: volunteerId });
+    return volunteer !== null;
+  } catch {
+    return false;
+  }
+}
+
+async function filterValidVolunteers(
+  ctx: any,
+  volunteers: RoutingResult[]
+): Promise<RoutingResult[]> {
+  const validated: RoutingResult[] = [];
+  for (const vol of volunteers) {
+    const isValid = await validateVolunteerId(ctx, vol.volunteer_id);
+    if (isValid) {
+      validated.push(vol);
+    }
+  }
+  return validated;
 }
 
 export const analyzeMessageAndRoute = action({
@@ -161,9 +185,14 @@ Analyze this message and recommend the best volunteers to handle it.`;
         suggested_response?: string;
       };
 
+      const validatedVolunteers = await filterValidVolunteers(
+        ctx,
+        parsed.recommended_volunteers || []
+      );
+
       return {
         analysis: parsed.analysis,
-        recommended_volunteers: parsed.recommended_volunteers || [],
+        recommended_volunteers: validatedVolunteers,
         suggested_response: parsed.suggested_response,
       };
     } catch (error) {
@@ -173,10 +202,10 @@ Analyze this message and recommend the best volunteers to handle it.`;
           message_type: "other",
           urgency: "medium",
           required_skills: [],
-          summary: "Unable to analyze message automatically",
+          summary: `AI analysis failed: ${error instanceof Error ? error.message : "Unknown error"}`,
         },
         recommended_volunteers: [],
-        suggested_response: undefined,
+        suggested_response: "AI routing unavailable. Please assign manually.",
       };
     }
   },
@@ -373,11 +402,140 @@ Find the best volunteer match.`;
       }
 
       const parsed: TaskMatchResponse = JSON.parse(aiResponseText);
+
+      if (parsed.best_match) {
+        const isValid = await validateVolunteerId(ctx, parsed.best_match.volunteer_id);
+        if (!isValid) {
+          parsed.best_match = null;
+        }
+      }
+
+      const validAlternatives: VolunteerMatchResult[] = [];
+      for (const alt of parsed.alternatives || []) {
+        const isValid = await validateVolunteerId(ctx, alt.volunteer_id);
+        if (isValid) {
+          validAlternatives.push(alt);
+        }
+      }
+      parsed.alternatives = validAlternatives;
+
       return parsed;
     } catch (error) {
       console.error("Volunteer matching error:", error);
-      return { best_match: null, alternatives: [] };
+      return { 
+        best_match: null, 
+        alternatives: [],
+      };
     }
+  },
+});
+
+interface EmergencyMessageResult {
+  analysis: {
+    message_type: string;
+    urgency: "low" | "medium" | "high" | "critical";
+    required_skills: string[];
+    summary: string;
+  };
+  recommended_volunteers: RoutingResult[];
+  suggested_response?: string;
+  task_created: Id<"tasks"> | null;
+  assignments_created: Id<"volunteers">[];
+}
+
+export const processEmergencyMessage = action({
+  args: {
+    message: v.string(),
+    incident_id: v.optional(v.id("incidents")),
+    auto_assign: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    analysis: v.object({
+      message_type: v.string(),
+      urgency: v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high"),
+        v.literal("critical")
+      ),
+      required_skills: v.array(v.string()),
+      summary: v.string(),
+    }),
+    recommended_volunteers: v.array(
+      v.object({
+        volunteer_id: v.string(),
+        volunteer_name: v.string(),
+        confidence: v.number(),
+        reasoning: v.string(),
+        matched_skills: v.array(v.string()),
+      })
+    ),
+    suggested_response: v.optional(v.string()),
+    task_created: v.union(v.id("tasks"), v.null()),
+    assignments_created: v.array(v.id("volunteers")),
+  }),
+  handler: async (ctx, args): Promise<EmergencyMessageResult> => {
+    let incidentContext = "";
+    let locationHint = "";
+
+    if (args.incident_id) {
+      const incident = await ctx.runQuery(api.incidents.get, { id: args.incident_id });
+      if (incident) {
+        incidentContext = `${incident.title} - ${incident.incident_type} (${incident.severity} severity)`;
+        locationHint = incident.location?.address || "";
+      }
+    }
+
+    const routing: {
+      analysis: {
+        message_type: string;
+        urgency: "low" | "medium" | "high" | "critical";
+        required_skills: string[];
+        summary: string;
+      };
+      recommended_volunteers: RoutingResult[];
+      suggested_response?: string;
+    } = await ctx.runAction(api.ai_routing.analyzeMessageAndRoute, {
+      message: args.message,
+      incident_context: incidentContext,
+      location_hint: locationHint,
+    });
+
+    let taskId: Id<"tasks"> | null = null;
+    const assignedVolunteerIds: Id<"volunteers">[] = [];
+
+    if (args.auto_assign && args.incident_id && routing.recommended_volunteers.length > 0) {
+      try {
+        taskId = await ctx.runMutation(api.tasks.create, {
+          incident_id: args.incident_id,
+          title: routing.analysis.summary,
+          description: args.message,
+          task_type: routing.analysis.message_type === "medical" ? "medical" : 
+                     routing.analysis.message_type === "rescue" ? "rescue" : "assessment",
+          priority: routing.analysis.urgency === "critical" ? "urgent" : routing.analysis.urgency,
+          required_skills: routing.analysis.required_skills,
+          status: "pending",
+        });
+
+        if (taskId && routing.recommended_volunteers[0]) {
+          await ctx.runMutation(api.matching.assignTaskToVolunteer, {
+            task_id: taskId,
+            volunteer_id: routing.recommended_volunteers[0].volunteer_id as Id<"volunteers">,
+          });
+          assignedVolunteerIds.push(routing.recommended_volunteers[0].volunteer_id as Id<"volunteers">);
+        }
+      } catch (error) {
+        console.error("Auto-assignment failed:", error);
+      }
+    }
+
+    return {
+      analysis: routing.analysis,
+      recommended_volunteers: routing.recommended_volunteers,
+      suggested_response: routing.suggested_response,
+      task_created: taskId,
+      assignments_created: assignedVolunteerIds,
+    };
   },
 });
 
