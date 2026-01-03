@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "convex dev",
-    "postinstall": "cd backend && npm install && npm run build",
+    "dev": "concurrently --kill-others-on-fail --prefix-colors \"blue,green,yellow\" --prefix \"[{name}]\" --names \"convex,backend,frontend\" \"bunx convex dev\" \"cd backend && bun run dev\" \"cd frontend && bun run dev\"",
+    "postinstall": "bun install --cwd backend && bun install --cwd frontend",
     "generateKeys": "node generateKeys.mjs"
   },
   "dependencies": {
@@ -13,6 +13,7 @@
     "convex": "^1.31.2"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "jose": "^6.1.3"
   }
 }

@@ -28,9 +28,8 @@ export { app };
 if (typeof Bun !== 'undefined') {
   const port = parseInt(process.env.PORT || '8000');
   console.log(`🚀 Server starting on http://localhost:${port}`);
-  const server = {
+  Bun.serve({
     port,
     fetch: app.fetch,
-  };
-  (globalThis as any).__bunServer = server;
+  });
 }

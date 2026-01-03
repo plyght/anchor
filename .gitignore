@@ -1,6 +1,8 @@
 # Convex
 .env.local
 .convex/
+convex/*.js
+!convex/_generated/*.js
 
 # Dependencies
 node_modules/
