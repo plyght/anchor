@@ -42,19 +42,19 @@ public class NoiseEncryptionService {
         }
     }
     
-    func initiateHandshake(with peerID: PeerID) throws -> Data {
+    public func initiateHandshake(with peerID: PeerID) throws -> Data {
         return try sessionManager.initiateHandshake(with: peerID)
     }
     
-    func processHandshakeMessage(from peerID: PeerID, message: Data) throws -> Data? {
+    public func processHandshakeMessage(from peerID: PeerID, message: Data) throws -> Data? {
         return try sessionManager.handleIncomingHandshake(from: peerID, message: message)
     }
     
-    func hasEstablishedSession(with peerID: PeerID) -> Bool {
+    public func hasEstablishedSession(with peerID: PeerID) -> Bool {
         return sessionManager.getSession(for: peerID)?.isEstablished() ?? false
     }
     
-    func encrypt(_ data: Data, for peerID: PeerID) throws -> Data {
+    public func encrypt(_ data: Data, for peerID: PeerID) throws -> Data {
         guard hasEstablishedSession(with: peerID) else {
             onHandshakeRequired?(peerID)
             throw NoiseEncryptionError.handshakeRequired
@@ -62,14 +62,14 @@ public class NoiseEncryptionService {
         return try sessionManager.encrypt(data, for: peerID)
     }
     
-    func decrypt(_ data: Data, from peerID: PeerID) throws -> Data {
+    public func decrypt(_ data: Data, from peerID: PeerID) throws -> Data {
         guard hasEstablishedSession(with: peerID) else {
             throw NoiseEncryptionError.sessionNotEstablished
         }
         return try sessionManager.decrypt(data, from: peerID)
     }
     
-    func signPacket(_ packet: BitchatPacket) -> BitchatPacket? {
+    public func signPacket(_ packet: BitchatPacket) -> BitchatPacket? {
         guard let packetData = packet.toBinaryDataForSigning() else {
             return nil
         }
@@ -84,7 +84,7 @@ public class NoiseEncryptionService {
     }
 }
 
-enum NoiseEncryptionError: Error {
+public enum NoiseEncryptionError: Error {
     case handshakeRequired
     case sessionNotEstablished
     case encryptionFailed

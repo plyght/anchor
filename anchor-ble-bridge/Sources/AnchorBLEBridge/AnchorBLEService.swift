@@ -23,7 +23,7 @@ public class AnchorBLEService: NSObject {
     public var signingPrivateKey: Curve25519.Signing.PrivateKey
     public var onMessageReceived: ((BitchatPacket) -> Void)?
     
-    private let noiseService: NoiseEncryptionService
+    public let noiseService: NoiseEncryptionService
     private var pendingDMs: [PeerID: [(content: String, messageID: String)]] = [:]
     
     public init(peerID: Data, noiseKey: Data, signingKey: Data, nickname: String, signingPrivateKey: Curve25519.Signing.PrivateKey) {
@@ -239,7 +239,7 @@ public class AnchorBLEService: NSObject {
         pendingDMs.removeValue(forKey: peerID)
     }
     
-    private func broadcastPacket(_ packet: BitchatPacket) {
+    public func broadcastPacket(_ packet: BitchatPacket) {
         guard let data = packet.toBinaryData(padding: false) else {
             SecureLogger.error("Failed to encode packet", category: .bluetooth)
             return

@@ -69,7 +69,7 @@ public struct BitchatPacket: Codable {
     
     /// Create binary representation for signing (without signature and TTL fields)
     /// TTL is excluded because it changes during packet relay operations
-    func toBinaryDataForSigning() -> Data? {
+    public func toBinaryDataForSigning() -> Data? {
         // Create a copy without signature and with fixed TTL for signing
         // TTL must be excluded because it changes during relay
         let unsignedPacket = BitchatPacket(

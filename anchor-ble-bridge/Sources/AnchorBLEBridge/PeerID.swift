@@ -8,8 +8,8 @@
 
 import Foundation
 
-struct PeerID: Equatable, Hashable {
-    enum Prefix: String, CaseIterable {
+public struct PeerID: Equatable, Hashable {
+    public enum Prefix: String, CaseIterable {
         /// When no prefix is provided
         case empty = ""
         /// `"mesh:"`
@@ -24,13 +24,13 @@ struct PeerID: Equatable, Hashable {
         case geoChat = "nostr:"
     }
     
-    let prefix: Prefix
+    public let prefix: Prefix
     
     /// Returns the actual value without any prefix
-    let bare: String
+    public let bare: String
     
     /// Returns the full `id` value by combining `(prefix + bare)`
-    var id: String { prefix.rawValue + bare }
+    public var id: String { prefix.rawValue + bare }
     
     // Private so the callers have to go through a convenience init
     private init(prefix: Prefix, bare: any StringProtocol) {
@@ -104,11 +104,11 @@ extension PeerID {
 // MARK: - Codable
 
 extension PeerID: Codable {
-    init(from decoder: any Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         self.init(str: try decoder.singleValueContainer().decode(String.self))
     }
     
-    func encode(to encoder: any Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(id)
     }
@@ -117,21 +117,19 @@ extension PeerID: Codable {
 // MARK: - Helpers
 
 extension PeerID {
-    var isEmpty: Bool {
+    public var isEmpty: Bool {
         id.isEmpty
     }
     
-    /// Returns true if `id` starts with "`nostr:`"
-    var isGeoChat: Bool {
+    public var isGeoChat: Bool {
         prefix == .geoChat
     }
     
-    /// Returns true if `id` starts with "`nostr_`"
-    var isGeoDM: Bool {
+    public var isGeoDM: Bool {
         prefix == .geoDM
     }
     
-    func toPercentEncoded() -> String {
+    public func toPercentEncoded() -> String {
         id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
     }
 }
@@ -206,7 +204,7 @@ extension PeerID {
 // MARK: - Comparable
 
 extension PeerID: Comparable {
-    static func < (lhs: PeerID, rhs: PeerID) -> Bool {
+    public static func < (lhs: PeerID, rhs: PeerID) -> Bool {
         lhs.id < rhs.id
     }
 }
@@ -214,8 +212,7 @@ extension PeerID: Comparable {
 // MARK: - CustomStringConvertible
 
 extension PeerID: CustomStringConvertible {
-    /// So it returns the actual `id` like before even inside another String
-    var description: String {
+    public var description: String {
         id
     }
 }
