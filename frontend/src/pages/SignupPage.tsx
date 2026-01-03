@@ -1,6 +1,11 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuthActions } from '@convex-dev/auth/react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShieldAlert, Loader2 } from 'lucide-react';
+import { authClient } from '@/lib/auth-client';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -11,133 +16,130 @@ export default function SignupPage() {
     phone: '',
   });
   const [error, setError] = useState('');
-  const { signIn } = useAuthActions();
-  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
+    
     try {
-      await signIn('password', { 
-        email: formData.email, 
-        password: formData.password, 
-        flow: 'signUp' 
+      const result = await authClient.signUp.email({
+        email: formData.email,
+        password: formData.password,
+        name: formData.fullName,
       });
-      navigate('/');
+      
+      if (result.error) {
+        setError(result.error.message || 'Registration failed. Please try again.');
+        setIsLoading(false);
+      }
     } catch (err) {
-      setError('Registration failed: Email conflict or system error');
-      console.error('Signup error:', err);
+      setError('Registration failed. Please try again.');
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-void p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-scanline opacity-10 pointer-events-none"></div>
-
-      <div className="bg-surface border border-tactical p-8 w-full max-w-md relative z-10 shadow-glow-blue">
-        <div className="border-b border-tactical pb-4 mb-8 text-center">
-          <h1 className="text-3xl font-display font-bold text-white uppercase tracking-wider mb-1">
-            Unit Registration
-          </h1>
-          <p className="font-mono text-xs text-neon-green uppercase tracking-[0.3em]">
-            New Personnel Onboarding
-          </p>
-        </div>
-
-        <form onSubmit={handleSignup} className="space-y-4">
-          {error && (
-            <div className="bg-neon-red/10 border border-neon-red text-neon-red px-4 py-3 font-mono text-sm uppercase">
-              [ERROR]: {error}
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
+              <ShieldAlert className="w-6 h-6" />
             </div>
-          )}
-          
-          <div>
-            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-              Full Designation (Name)
-            </label>
-            <input
-              type="text"
-              value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
-              placeholder="e.g. JOHN DOE"
-              required
-            />
           </div>
-
-          <div>
-            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-              Comms ID (Email)
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
-              placeholder="operator@anchor.net"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-              Security Key (Password)
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-                BitChat Handle
-              </label>
-              <input
-                type="text"
-                value={formData.bitchatUsername}
-                onChange={(e) => setFormData({ ...formData, bitchatUsername: e.target.value })}
-                className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
-                placeholder="@handle"
+          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+          <CardDescription>
+            Enter your information to register as a volunteer
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSignup} className="space-y-4">
+            {error && (
+              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                placeholder="John Doe"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
               />
             </div>
-            <div>
-              <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-                Frequency (Phone)
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-green focus:outline-none transition-colors"
-                placeholder="(Optional)"
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
               />
             </div>
-          </div>
 
-          <button
-            type="submit"
-            className="w-full bg-neon-green text-black border border-neon-green py-3 font-mono font-bold uppercase tracking-widest hover:bg-white hover:border-white transition-all duration-200 mt-6"
-          >
-            Initialize Unit
-          </button>
-        </form>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
+              />
+            </div>
 
-        <div className="mt-8 text-center border-t border-tactical pt-4">
-          <p className="text-xs font-mono text-gray-500">
-            EXISTING UNIT?{' '}
-            <Link to="/login" className="text-neon-green hover:text-white uppercase decoration-none border-b border-neon-green hover:border-white transition-colors">
-              Access Terminal
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bitchat">BitChat Handle</Label>
+                <Input
+                  id="bitchat"
+                  placeholder="@handle"
+                  value={formData.bitchatUsername}
+                  onChange={(e) => setFormData({ ...formData, bitchatUsername: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone (Optional)</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+1..."
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full mt-2" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                'Create Account'
+              )}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary font-medium hover:underline">
+              Sign in
             </Link>
           </p>
-        </div>
-      </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

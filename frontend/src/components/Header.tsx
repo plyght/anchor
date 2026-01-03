@@ -1,38 +1,52 @@
 import { Link, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { ShieldAlert, LayoutDashboard, Users, UserCircle } from 'lucide-react';
 
 export default function Header() {
   const location = useLocation();
 
+  const navItems = [
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/admin', label: 'Admin', icon: ShieldAlert },
+    { path: '/profile', label: 'Profile', icon: UserCircle },
+    { path: '/login', label: 'Login', icon: Users },
+  ];
+
   const isActive = (path: string) => {
-    return location.pathname === path ? 'text-neon-blue border-b-2 border-neon-blue' : 'text-gray-400 hover:text-white';
+    return location.pathname === path 
+      ? 'text-primary bg-primary/10' 
+      : 'text-muted-foreground hover:text-primary hover:bg-muted';
   };
 
   return (
-    <header className="border-b border-tactical bg-surface/95 backdrop-blur-sm sticky top-0 z-40">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 bg-neon-green rounded-full shadow-[0_0_8px_rgba(0,255,157,0.6)] animate-pulse-fast"></div>
-          <Link to="/" className="text-3xl font-display font-bold tracking-widest text-white uppercase flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+          <Link to="/" className="text-xl font-heading font-bold tracking-tight text-foreground flex items-center gap-2">
             Anchor
-            <span className="text-xs font-mono text-gray-500 font-normal border border-gray-700 px-1 py-0.5 rounded-none">v2.0</span>
           </Link>
         </div>
         
-        <nav className="flex gap-8">
-          {[
-            { path: '/', label: 'Tasks' },
-            { path: '/admin', label: 'Command' },
-            { path: '/profile', label: 'Personnel' },
-            { path: '/login', label: 'Auth' }
-          ].map((link) => (
-            <Link 
-              key={link.path}
-              to={link.path} 
-              className={`font-mono text-sm uppercase tracking-widest py-5 transition-colors duration-100 ${isActive(link.path)}`}
-            >
-              <span className="opacity-50 mr-1">//</span>{link.label}
-            </Link>
-          ))}
+        <nav className="flex gap-1">
+          {navItems.map((link) => {
+            const Icon = link.icon;
+            return (
+              <Link 
+                key={link.path}
+                to={link.path} 
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                  isActive(link.path)
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </header>

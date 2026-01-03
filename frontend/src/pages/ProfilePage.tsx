@@ -1,5 +1,12 @@
 import { useState } from 'react';
 import Layout from '../components/Layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UserCircle, X, Plus } from 'lucide-react';
 
 export default function ProfilePage() {
   const [skills, setSkills] = useState<string[]>([]);
@@ -19,111 +26,90 @@ export default function ProfilePage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="border-b border-tactical pb-4">
-          <h1 className="text-4xl font-display font-bold text-white uppercase tracking-wider">
-            Personnel Record
-          </h1>
-          <p className="font-mono text-xs text-neon-blue uppercase tracking-widest mt-1">
-            Unit Configuration & Status
-          </p>
+        <div>
+          <h1 className="text-3xl font-heading font-bold tracking-tight">Profile Settings</h1>
+          <p className="text-muted-foreground mt-1">Manage your personal information and capabilities.</p>
         </div>
         
-        <form className="bg-surface border border-tactical p-8 space-y-8 relative overflow-hidden">
-          {/* Decorative corner */}
-          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-neon-blue"></div>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-                Full Designation
-              </label>
-              <input
-                type="text"
-                className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none"
-                placeholder="Name"
-                defaultValue="Unit #734"
-              />
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                <UserCircle className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <div>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>Update your contact details and availability.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" defaultValue="Unit #734" placeholder="Your name" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bitchat">BitChat ID</Label>
+                <Input id="bitchat" placeholder="@handle" />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-                BitChat ID
-              </label>
-              <input
-                type="text"
-                className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none"
-                placeholder="@handle"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-              Skill Modules (Capabilities)
-            </label>
-            <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={newSkill}
-                onChange={(e) => setNewSkill(e.target.value)}
-                className="flex-1 bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none"
-                placeholder="ENTER_MODULE_ID"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-              />
-              <button
-                type="button"
-                onClick={addSkill}
-                className="bg-neon-blue/10 text-neon-blue border border-neon-blue px-6 hover:bg-neon-blue hover:text-black transition-colors font-mono text-sm uppercase"
-              >
-                Install
-              </button>
-            </div>
-            
-            <div className="bg-void/50 border border-tactical p-4 min-h-[100px]">
-              {skills.length === 0 ? (
-                <span className="text-gray-600 font-mono text-xs uppercase opacity-50">No modules installed</span>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {skills.map(skill => (
-                    <span
-                      key={skill}
-                      className="bg-neon-blue/5 border border-neon-blue/50 text-neon-blue px-3 py-1 text-xs font-mono uppercase flex items-center gap-3 group hover:bg-neon-blue/20 transition-colors"
-                    >
+            <div className="space-y-2">
+              <Label>Skills & Capabilities</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
+                  placeholder="Add a skill (e.g., First Aid)"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                  className="max-w-sm"
+                />
+                <Button variant="outline" onClick={addSkill}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add
+                </Button>
+              </div>
+              
+              <div className="flex flex-wrap gap-2 min-h-[40px] p-4 border rounded-md bg-muted/20">
+                {skills.length === 0 ? (
+                  <span className="text-sm text-muted-foreground italic">No skills added yet.</span>
+                ) : (
+                  skills.map(skill => (
+                    <Badge key={skill} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1">
                       {skill}
                       <button
                         type="button"
                         onClick={() => removeSkill(skill)}
-                        className="text-neon-blue/50 hover:text-neon-red font-bold"
+                        className="hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors"
                       >
-                        ×
+                        <X className="w-3 h-3" />
                       </button>
-                    </span>
-                  ))}
-                </div>
-              )}
+                    </Badge>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-              Operational Status
-            </label>
-            <select className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none appearance-none">
-              <option value="available">READY (AVAILABLE)</option>
-              <option value="busy">ENGAGED (BUSY)</option>
-              <option value="offline">OFFLINE</option>
-            </select>
-          </div>
-
-          <div className="pt-4 border-t border-tactical">
-            <button
-              type="submit"
-              className="w-full bg-white text-black border border-white py-3 font-mono font-bold uppercase tracking-widest hover:bg-neon-blue hover:border-neon-blue transition-all duration-200"
-            >
-              Update Record
-            </button>
-          </div>
-        </form>
+            <div className="space-y-2">
+              <Label htmlFor="status">Current Status</Label>
+              <Select defaultValue="available">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="available">Available (Ready)</SelectItem>
+                  <SelectItem value="busy">Busy (Engaged)</SelectItem>
+                  <SelectItem value="offline">Offline</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button className="ml-auto">Save Changes</Button>
+          </CardFooter>
+        </Card>
       </div>
     </Layout>
   );

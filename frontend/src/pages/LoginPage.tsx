@@ -1,92 +1,105 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuthActions } from '@convex-dev/auth/react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShieldAlert, Loader2 } from 'lucide-react';
+import { authClient } from '@/lib/auth-client';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { signIn } = useAuthActions();
-  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
+    
     try {
-      await signIn('password', { email, password, flow: 'signIn' });
-      navigate('/');
+      const result = await authClient.signIn.email({
+        email,
+        password,
+      });
+      
+      if (result.error) {
+        setError(result.error.message || 'Invalid email or password');
+        setIsLoading(false);
+      }
     } catch (err) {
-      setError('Authentication failed: Invalid credentials');
-      console.error('Login error:', err);
+      setError('Invalid email or password');
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-void p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-scanline opacity-10 pointer-events-none"></div>
-      
-      <div className="bg-surface border border-tactical p-8 w-full max-w-md relative z-10 shadow-glow-blue">
-        <div className="border-b border-tactical pb-4 mb-8 text-center">
-          <h1 className="text-4xl font-display font-bold text-white uppercase tracking-widest mb-1">
-            Anchor
-          </h1>
-          <p className="font-mono text-xs text-neon-blue uppercase tracking-[0.3em]">
-            Secure Access Terminal
-          </p>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          {error && (
-            <div className="bg-neon-red/10 border border-neon-red text-neon-red px-4 py-3 font-mono text-sm uppercase">
-              [ERROR]: {error}
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
+              <ShieldAlert className="w-6 h-6" />
             </div>
-          )}
-          
-          <div>
-            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-              Identity (Email)
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none transition-colors"
-              placeholder="OPERATOR_ID"
-              required
-            />
           </div>
-          
-          <div>
-            <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-              Passcode
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-blue focus:outline-none transition-colors"
-              placeholder="••••••••"
-              required
-            />
-          </div>
+          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardDescription>
+            Enter your credentials to access the coordination system
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
 
-          <button
-            type="submit"
-            className="w-full bg-neon-blue text-black border border-neon-blue py-3 font-mono font-bold uppercase tracking-widest hover:bg-white hover:border-white transition-all duration-200 mt-4"
-          >
-            Authenticate
-          </button>
-        </form>
-
-        <div className="mt-8 text-center border-t border-tactical pt-4">
-          <p className="text-xs font-mono text-gray-500">
-            NO CREDENTIALS?{' '}
-            <Link to="/signup" className="text-neon-blue hover:text-white uppercase decoration-none border-b border-neon-blue hover:border-white transition-colors">
-              Request Access
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-muted-foreground">
+            Don't have an account?{' '}
+            <Link to="/signup" className="text-primary font-medium hover:underline">
+              Sign up
             </Link>
           </p>
-        </div>
-      </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

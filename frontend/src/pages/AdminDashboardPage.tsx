@@ -3,6 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import Layout from '../components/Layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, AlertTriangle, Users, ClipboardList } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
@@ -90,217 +99,228 @@ export default function AdminDashboardPage() {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <div className="flex justify-between items-end border-b border-tactical pb-4">
+      <div className="space-y-8 max-w-6xl mx-auto">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-display font-bold text-white uppercase tracking-wider">
-              Command Center
+            <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground">
+              Admin Dashboard
             </h1>
-            <p className="text-neon-amber font-mono text-sm mt-1 tracking-widest">
-              ADMINISTRATIVE ACCESS GRANTED
+            <p className="text-muted-foreground mt-1">
+              Manage incidents and coordinate response efforts.
             </p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-neon-red text-black border border-neon-red px-6 py-2 hover:bg-white hover:text-black transition-colors font-mono font-bold text-sm uppercase tracking-wider"
-          >
-            Initiate Protocol
-          </button>
+          <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Incident
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New Incident</DialogTitle>
+                <DialogDescription>
+                  Enter the details of the emergency incident to initiate response.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateIncident} className="space-y-6 py-4">
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="title">Incident Title</Label>
+                    <Input
+                      id="title"
+                      placeholder="e.g. Sector 7 Flood"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="description">Description</Label>
+                    <textarea
+                      id="description"
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="Operational details..."
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="type">Type</Label>
+                      <Select 
+                        value={formData.incidentType} 
+                        onValueChange={(value: any) => setFormData({ ...formData, incidentType: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="flood">Flood</SelectItem>
+                          <SelectItem value="fire">Fire</SelectItem>
+                          <SelectItem value="earthquake">Earthquake</SelectItem>
+                          <SelectItem value="storm">Storm</SelectItem>
+                          <SelectItem value="medical">Medical</SelectItem>
+                          <SelectItem value="rescue">Rescue</SelectItem>
+                          <SelectItem value="infrastructure">Infrastructure</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="severity">Severity</Label>
+                      <Select 
+                        value={formData.severity} 
+                        onValueChange={(value: any) => setFormData({ ...formData, severity: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select severity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="critical">Critical</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="waterLevel">Water Level (ft)</Label>
+                      <Input
+                        id="waterLevel"
+                        type="number"
+                        step="0.1"
+                        placeholder="0.0"
+                        value={formData.waterLevel}
+                        onChange={(e) => setFormData({ ...formData, waterLevel: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="threshold">Threshold (ft)</Label>
+                      <Input
+                        id="threshold"
+                        type="number"
+                        step="0.1"
+                        placeholder="0.0"
+                        value={formData.threshold}
+                        onChange={(e) => setFormData({ ...formData, threshold: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="address">Location / Address</Label>
+                    <Input
+                      id="address"
+                      placeholder="Sector / Grid Ref"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={creating}>
+                    {creating ? 'Creating...' : 'Create Incident'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-surface border border-tactical p-6">
-            <h3 className="font-mono text-xs uppercase text-gray-500 tracking-widest mb-2">Active Threats</h3>
-            <p className="text-5xl font-display font-bold text-neon-blue">{stats.activeIncidents}</p>
-          </div>
-          <div className="bg-surface border border-tactical p-6">
-            <h3 className="font-mono text-xs uppercase text-gray-500 tracking-widest mb-2">Pending Ops</h3>
-            <p className="text-5xl font-display font-bold text-neon-amber">{stats.pendingTasks}</p>
-          </div>
-          <div className="bg-surface border border-tactical p-6">
-            <h3 className="font-mono text-xs uppercase text-gray-500 tracking-widest mb-2">Units Available</h3>
-            <p className="text-5xl font-display font-bold text-neon-green">{stats.availableVolunteers}</p>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Incidents</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.activeIncidents}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pendingTasks}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Volunteers Online</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.availableVolunteers}</div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="bg-surface border border-tactical">
-          <div className="p-4 border-b border-tactical bg-void/30">
-            <h2 className="text-xl font-display font-bold text-white uppercase tracking-wide">Incident Log</h2>
-          </div>
-          {incidents.length === 0 ? (
-            <p className="text-gray-500 text-center py-12 font-mono uppercase">System Clear</p>
-          ) : (
-            <div className="divide-y divide-tactical">
-              {incidents.map((incident: { _id: string; title: string; incident_type: string; severity: string; status: string; _creationTime: number }) => (
-                <div
-                  key={incident._id}
-                  onClick={() => navigate(`/incidents/${incident._id}`)}
-                  className="flex items-center justify-between p-4 hover:bg-white/5 cursor-pointer transition-colors group"
-                >
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <span className={`w-2 h-2 rounded-full ${incident.status === 'active' ? 'bg-neon-green animate-pulse' : 'bg-gray-600'}`}></span>
-                      <h3 className="font-display font-bold text-white group-hover:text-neon-blue transition-colors text-lg uppercase">{incident.title}</h3>
-                    </div>
-                    <p className="text-xs font-mono text-gray-500 mt-1 pl-5">
-                      {incident.incident_type} // {new Date(incident._creationTime).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 font-mono text-xs">
-                    <span
-                      className={`px-2 py-1 uppercase border ${
-                        incident.severity === 'critical'
-                          ? 'border-neon-red text-neon-red bg-neon-red/10'
-                          : incident.severity === 'high'
-                          ? 'border-neon-amber text-neon-amber bg-neon-amber/10'
-                          : 'border-neon-blue text-neon-blue bg-neon-blue/10'
-                      }`}
+        <Card>
+          <CardHeader>
+            <CardTitle>Incident Log</CardTitle>
+            <CardDescription>Recent emergency incidents and their status.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {incidents.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No incidents recorded.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {incidents.map((incident: any) => (
+                    <TableRow 
+                      key={incident._id} 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/incidents/${incident._id}`)}
                     >
-                      {incident.severity}
-                    </span>
-                    <span className="px-2 py-1 uppercase border border-gray-600 text-gray-400">
-                      {incident.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                      <TableCell className="font-medium">{incident.title}</TableCell>
+                      <TableCell className="capitalize">{incident.incident_type}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          incident.severity === 'critical' ? 'destructive' :
+                          incident.severity === 'high' ? 'destructive' :
+                          incident.severity === 'medium' ? 'secondary' : 'outline'
+                        }>
+                          {incident.severity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${
+                            incident.status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                          }`} />
+                          <span className="capitalize">{incident.status}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {new Date(incident._creationTime).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-surface border border-neon-red shadow-glow-red max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-tactical bg-neon-red/5">
-              <h2 className="text-2xl font-display font-bold text-neon-red uppercase tracking-wider">
-                Initiate Emergency Protocol
-              </h2>
-            </div>
-            
-            <form onSubmit={handleCreateIncident} className="p-6 space-y-6">
-              <div>
-                <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-                  Code Name / Title *
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-red focus:outline-none transition-colors"
-                  placeholder="e.g. SECTOR_7_FLOOD"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-                  Parameters / Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-red focus:outline-none transition-colors"
-                  rows={3}
-                  placeholder="Operational details..."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">Type</label>
-                  <select
-                    value={formData.incidentType}
-                    onChange={(e) => setFormData({ ...formData, incidentType: e.target.value as typeof formData.incidentType })}
-                    className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-red focus:outline-none appearance-none"
-                  >
-                    <option value="flood">FLOOD</option>
-                    <option value="fire">FIRE</option>
-                    <option value="earthquake">EARTHQUAKE</option>
-                    <option value="storm">STORM</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-                    Severity Level *
-                  </label>
-                  <select
-                    value={formData.severity}
-                    onChange={(e) => setFormData({ ...formData, severity: e.target.value as typeof formData.severity })}
-                    className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-red focus:outline-none appearance-none"
-                    required
-                  >
-                    <option value="low">LOW</option>
-                    <option value="medium">MEDIUM</option>
-                    <option value="high">HIGH</option>
-                    <option value="critical">CRITICAL</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-                    Water Level (ft)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={formData.waterLevel}
-                    onChange={(e) => setFormData({ ...formData, waterLevel: e.target.value })}
-                    className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-red focus:outline-none"
-                    placeholder="0.0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">
-                    Threshold (ft)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={formData.threshold}
-                    onChange={(e) => setFormData({ ...formData, threshold: e.target.value })}
-                    className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-red focus:outline-none"
-                    placeholder="0.0"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">Coordinates / Address</label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full bg-void border border-tactical p-3 text-white font-mono focus:border-neon-red focus:outline-none"
-                  placeholder="Sector / Grid Ref"
-                />
-              </div>
-
-              <div className="flex gap-4 mt-8 pt-4 border-t border-tactical">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-3 border border-gray-700 text-gray-400 font-mono text-sm uppercase hover:bg-white/5 transition-colors"
-                  disabled={creating}
-                >
-                  Abort
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-neon-red text-black border border-neon-red px-4 py-3 font-mono font-bold text-sm uppercase hover:bg-white transition-colors disabled:opacity-50"
-                  disabled={creating}
-                >
-                  {creating ? 'INITIALIZING...' : 'EXECUTE'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </Layout>
   );
 }

@@ -1,10 +1,11 @@
 import { StrictMode, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ConvexAuthProvider } from '@convex-dev/auth/react'
+import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
 import './index.css'
 import App from './App.tsx'
 import { convex } from './lib/convex.ts'
 import { wakeupBackend } from './lib/backendWakeup.ts'
+import { authClient } from './lib/auth-client'
 
 function Root() {
   const [backendReady, setBackendReady] = useState(false);
@@ -12,10 +13,14 @@ function Root() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    console.log('[Root] Initializing app...');
+    console.log('[Root] VITE_CONVEX_URL:', import.meta.env.VITE_CONVEX_URL);
+    console.log('[Root] VITE_API_URL:', import.meta.env.VITE_API_URL);
+    
     const apiUrl = import.meta.env.VITE_API_URL;
     
     if (!apiUrl) {
-      console.warn('VITE_API_URL not set, skipping backend wakeup');
+      console.warn('[Root] VITE_API_URL not set, skipping backend wakeup');
       setBackendReady(true);
       return;
     }
@@ -28,9 +33,11 @@ function Root() {
       }
     }).then((success) => {
       if (success) {
+        console.log('[Root] Backend ready');
         setRetryStatus('Backend ready!');
         setTimeout(() => setBackendReady(true), 500);
       } else {
+        console.error('[Root] Backend wakeup failed');
         setError(true);
       }
     });
@@ -102,11 +109,25 @@ function Root() {
     );
   }
 
+  console.log('[Root] Rendering ConvexAuthProvider with client');
+  console.log('[Root] Convex client connection state:', (convex as any).connectionState?.()?.state || 'unknown');
+  console.log('[Root] Convex client URL:', (convex as any)._options?.url || import.meta.env.VITE_CONVEX_URL);
+  console.log('[Root] Checking for existing tokens before rendering...');
+  
+  const jwtKey = `__convexAuthJWT_${import.meta.env.VITE_CONVEX_URL?.replace(/[^a-zA-Z0-9]/g, '')}`;
+  const existingJWT = localStorage.getItem(jwtKey);
+  console.log('[Root] Existing JWT found:', existingJWT ? 'YES' : 'NO');
+  
+  if (existingJWT) {
+    console.log('[Root] JWT exists in storage but auth state may not be initialized yet');
+    console.log('[Root] JWT preview:', existingJWT.substring(0, 50) + '...');
+  }
+  
   return (
     <StrictMode>
-      <ConvexAuthProvider client={convex}>
+      <ConvexBetterAuthProvider client={convex} authClient={authClient}>
         <App />
-      </ConvexAuthProvider>
+      </ConvexBetterAuthProvider>
     </StrictMode>
   );
 }

@@ -12,8 +12,11 @@
     "generateKeys": "node generateKeys.mjs"
   },
   "dependencies": {
-    "@convex-dev/auth": "^0.0.90",
-    "convex": "^1.31.2"
+    "@convex-dev/better-auth": "^0.10.9",
+    "better-auth": "1.4.9",
+    "convex": "^1.31.2",
+    "convex-helpers": "^0.1.108",
+    "openai": "^6.15.0"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

@@ -10,7 +10,6 @@
     "dev": "bun run src/index.ts"
   },
   "devDependencies": {
-    "@convex-dev/auth": "^0.0.90",
     "@types/bun": "latest",
     "typescript": "^5"
   },

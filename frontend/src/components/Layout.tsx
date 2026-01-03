@@ -7,10 +7,9 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none bg-scanline opacity-10 z-50"></div>
+    <div className="min-h-screen flex flex-col bg-background font-sans antialiased text-foreground selection:bg-primary/10 selection:text-primary">
       <Header />
-      <main className="container mx-auto px-4 py-8 flex-grow relative z-10">
+      <main className="flex-1 container mx-auto px-4 py-8">
         {children}
       </main>
     </div>
