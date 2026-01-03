@@ -6,7 +6,7 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "build": "tsc -p tsconfig.prod.json",
-    "start:node": "node dist/server.js",
+    "start:node": "npx tsx src/server.ts",
     "dev": "bun run src/index.ts"
   },
   "devDependencies": {
