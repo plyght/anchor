@@ -56,13 +56,22 @@ service.onMessageReceived = { (packet: BitchatPacket) in
                 let action = String(parts[1])
                 
                 if ["A", "ACCEPT", "D", "DECLINE", "DONE", "COMPLETE"].contains(action) {
-                    print("   ✅ Task response detected: code=\(code) action=\(action)")
+                    print("   Task response detected: code=\(code) action=\(action)")
+                    
+                    let nickname = discoveredPeers.first(where: { $0.value == packet.senderID })?.key ?? "Volunteer"
                     
                     Task {
-                        let success = await anchor.reportTaskResponse(taskId: code, volunteerId: volunteerId, action: action)
-                        if success {
-                            let responseMsg = "\(code) \(action == "A" || action == "ACCEPT" ? "accepted" : action == "DONE" || action == "COMPLETE" ? "completed" : "declined")"
-                            service.sendMessage(responseMsg, to: packet.senderID)
+                        let result = await anchor.reportTaskResponse(taskId: code, volunteerId: volunteerId, action: action)
+                        if result.success {
+                            let actionWord = action == "A" || action == "ACCEPT" ? "accepted" : action == "DONE" || action == "COMPLETE" ? "completed" : "declined"
+                            
+                            if result.isTargeted {
+                                let responseMsg = "\(code) \(actionWord)"
+                                service.sendMessage(responseMsg, to: packet.senderID)
+                            } else {
+                                let responseMsg = "\(nickname) \(actionWord) \(code)"
+                                service.sendMessage(responseMsg)
+                            }
                         }
                     }
                 }
@@ -121,13 +130,22 @@ service.onMessageReceived = { (packet: BitchatPacket) in
                         let action = String(parts[1])
                         
                         if ["A", "ACCEPT", "D", "DECLINE", "DONE", "COMPLETE"].contains(action) {
-                            print("   ✅ Task response detected: code=\(code) action=\(action)")
+                            print("   Task response detected: code=\(code) action=\(action)")
+                            
+                            let nickname = discoveredPeers.first(where: { $0.value == packet.senderID })?.key ?? "Volunteer"
                             
                             Task {
-                                let success = await anchor.reportTaskResponse(taskId: code, volunteerId: volunteerId, action: action)
-                                if success {
-                                    let responseMsg = "\(code) \(action == "A" || action == "ACCEPT" ? "accepted" : action == "DONE" || action == "COMPLETE" ? "completed" : "declined")"
-                                    service.sendMessage(responseMsg, to: packet.senderID)
+                                let result = await anchor.reportTaskResponse(taskId: code, volunteerId: volunteerId, action: action)
+                                if result.success {
+                                    let actionWord = action == "A" || action == "ACCEPT" ? "accepted" : action == "DONE" || action == "COMPLETE" ? "completed" : "declined"
+                                    
+                                    if result.isTargeted {
+                                        let responseMsg = "\(code) \(actionWord)"
+                                        service.sendMessage(responseMsg, to: packet.senderID)
+                                    } else {
+                                        let responseMsg = "\(nickname) \(actionWord) \(code)"
+                                        service.sendMessage(responseMsg)
+                                    }
                                 }
                             }
                         }

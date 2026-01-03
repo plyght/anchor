@@ -64,8 +64,12 @@ public class AnchorIntegration {
         }
     }
     
-    @discardableResult
-    public func reportTaskResponse(taskId: String, volunteerId: String, action: String) async -> Bool {
+    public struct TaskResponseResult {
+        public let success: Bool
+        public let isTargeted: Bool
+    }
+    
+    public func reportTaskResponse(taskId: String, volunteerId: String, action: String) async -> TaskResponseResult {
         do {
             let url = "\(backendURL)/api/tasks/\(taskId)/respond"
             var request = HTTPClientRequest(url: url)
@@ -80,14 +84,18 @@ public class AnchorIntegration {
             
             if response.status == .ok {
                 print("Reported \(action) from \(volunteerId.prefix(8)) for task \(taskId)")
-                return true
+                
+                let bodyData = try await response.body.collect(upTo: 1024 * 1024)
+                let responseData = try JSONDecoder().decode(TaskResponseData.self, from: bodyData)
+                
+                return TaskResponseResult(success: true, isTargeted: responseData.is_targeted ?? false)
             } else {
                 print("Response \(response.status.code) for task \(taskId)")
-                return false
+                return TaskResponseResult(success: false, isTargeted: false)
             }
         } catch {
-            print("❌ Failed to report task response: \(error)")
-            return false
+            print("Failed to report task response: \(error)")
+            return TaskResponseResult(success: false, isTargeted: false)
         }
     }
 }
@@ -117,4 +125,11 @@ struct TaskResponse: Codable {
 
 struct TasksResponse: Codable {
     let tasks: [AnchorTask]
+}
+
+struct TaskResponseData: Codable {
+    let success: Bool
+    let task_id: String
+    let status: String
+    let is_targeted: Bool?
 }

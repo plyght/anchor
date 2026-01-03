@@ -135,7 +135,8 @@ tasks.post('/:acceptance_code/respond', async (c) => {
     return c.json({ 
       success: true, 
       task_id: task._id,
-      status: newStatus 
+      status: newStatus,
+      is_targeted: !!task.target_volunteer_bitchat_username
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
