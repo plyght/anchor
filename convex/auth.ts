@@ -12,7 +12,11 @@ export const authComponent = createClient<DataModel>(components.betterAuth);
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
-    trustedOrigins: [siteUrl],
+    trustedOrigins: [
+      "http://localhost:5173",
+      "https://anchor-flame.vercel.app",
+      siteUrl,
+    ],
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,

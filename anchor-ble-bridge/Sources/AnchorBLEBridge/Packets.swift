@@ -109,16 +109,21 @@ public struct AnnouncementPacket {
     }
 }
 
-struct PrivateMessagePacket {
-    let messageID: String
-    let content: String
+public struct PrivateMessagePacket {
+    public let messageID: String
+    public let content: String
 
     private enum TLVType: UInt8 {
         case messageID = 0x00
         case content = 0x01
     }
+    
+    public init(messageID: String, content: String) {
+        self.messageID = messageID
+        self.content = content
+    }
 
-    func encode() -> Data? {
+    public func encode() -> Data? {
         var data = Data()
         data.reserveCapacity(2 + min(messageID.count, 255) + 2 + min(content.count, 255))
 
@@ -137,7 +142,7 @@ struct PrivateMessagePacket {
         return data
     }
 
-    static func decode(from data: Data) -> PrivateMessagePacket? {
+    public static func decode(from data: Data) -> PrivateMessagePacket? {
         var offset = 0
         var messageID: String?
         var content: String?

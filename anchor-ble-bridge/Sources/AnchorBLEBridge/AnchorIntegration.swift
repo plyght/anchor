@@ -5,6 +5,7 @@ public class AnchorIntegration {
     private let httpClient: HTTPClient
     private let backendURL: String
     private var pollTimer: Timer?
+    private var backendOffline = false
     
     public var onTaskReceived: ((AnchorTask) -> Void)?
     
@@ -23,7 +24,6 @@ public class AnchorIntegration {
                 await self?.pollDispatchedTasks()
             }
         }
-        SecureLogger.info("Started polling anchor backend every \(interval)s", category: .session)
     }
     
     public func stopPolling() {
@@ -38,8 +38,12 @@ public class AnchorIntegration {
             let response = try await httpClient.execute(request, timeout: .seconds(10))
             
             guard response.status == .ok else {
-                SecureLogger.warning("Task poll failed: HTTP \(response.status.code)", category: .session)
                 return
+            }
+            
+            if backendOffline {
+                backendOffline = false
+                print("✅ Anchor backend reconnected")
             }
             
             let body = try await response.body.collect(upTo: 1024 * 1024)
@@ -49,7 +53,10 @@ public class AnchorIntegration {
                 onTaskReceived?(task)
             }
         } catch {
-            SecureLogger.error("Failed to poll tasks: \(error)", category: .session)
+            if !backendOffline {
+                backendOffline = true
+                print("⚠️  Anchor backend offline (will retry silently)")
+            }
         }
     }
     
@@ -67,12 +74,10 @@ public class AnchorIntegration {
             let response = try await httpClient.execute(request, timeout: .seconds(10))
             
             if response.status == .ok {
-                SecureLogger.info("Reported \(action) from \(volunteerId) for task \(taskId)", category: .session)
-            } else {
-                SecureLogger.warning("Failed to report response: HTTP \(response.status.code)", category: .session)
+                print("✅ Reported \(action) from \(volunteerId.prefix(8)) for task \(taskId)")
             }
         } catch {
-            SecureLogger.error("Failed to report task response: \(error)", category: .session)
+            print("❌ Failed to report task response: \(error)")
         }
     }
 }

@@ -14,11 +14,12 @@ guard let myPeerID = Data(hexString: String(peerIDString)) else {
 
 let myNickname = "anchor-alerts"
 
-print("🔑 Noise key SHA256: \(myNoiseKey.sha256Fingerprint())")
-print("🆔 Derived peer ID:  \(peerIDString)")
-print("✅ Peer ID matches:  \(myPeerID.hexEncodedString() == peerIDString)")
+
 
 let service = AnchorBLEService(peerID: myPeerID, noiseKey: myNoiseKey, signingKey: mySigningKey, nickname: myNickname, signingPrivateKey: signingPrivateKey)
+
+var discoveredPeers: [String: Data] = [:]
+var announcedPeerIDs: Set<String> = []
 
 service.onMessageReceived = { (packet: BitchatPacket) in
     let timestamp = Date(timeIntervalSince1970: Double(packet.timestamp) / 1000.0)
@@ -26,12 +27,27 @@ service.onMessageReceived = { (packet: BitchatPacket) in
     let volunteerId = packet.senderID.hexEncodedString()
     
     let isDirect = packet.recipientID != nil
-    let prefix = isDirect ? "📨 DM" : "📩 Message"
     
     if packet.type == 0x02 {
-        if let message = String(data: packet.payload, encoding: .utf8) {
-            print("[\(timeStr)] \(prefix) from \(volunteerId.prefix(8)): \(message)")
-            
+        var message: String? = nil
+        
+        if isDirect {
+            if let privateMsg = PrivateMessagePacket.decode(from: packet.payload) {
+                message = privateMsg.content
+                print("[\(timeStr)] 📨 DM from \(volunteerId.prefix(8)): \(privateMsg.content)")
+            } else {
+                print("[\(timeStr)] 📨 DM from \(volunteerId.prefix(8)) [failed to decode]")
+            }
+        } else {
+            message = String(data: packet.payload, encoding: .utf8)
+            if let msg = message {
+                print("[\(timeStr)] 📩 Message from \(volunteerId.prefix(8)): \(msg)")
+            } else {
+                print("[\(timeStr)] 📩 Message from \(volunteerId.prefix(8)) [binary data, \(packet.payload.count) bytes]")
+            }
+        }
+        
+        if let message = message {
             let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             let parts = trimmed.split(separator: " ")
             
@@ -47,14 +63,16 @@ service.onMessageReceived = { (packet: BitchatPacket) in
                     }
                 }
             }
-        } else {
-            print("[\(timeStr)] 📩 Message from \(volunteerId.prefix(8)) [binary data, \(packet.payload.count) bytes]")
         }
     } else if packet.type == 0x01 {
         if let announcement = AnnouncementPacket.decode(from: packet.payload) {
-            print("[\(timeStr)] 👋 \(announcement.nickname) announced (\(packet.senderID.hexEncodedString().prefix(8)))")
-        } else {
-            print("[\(timeStr)] 👋 Peer announced (failed to decode): \(packet.senderID.hexEncodedString().prefix(8)) | payload: \(packet.payload.count) bytes")
+            let peerIDHex = packet.senderID.hexEncodedString()
+            discoveredPeers[announcement.nickname] = packet.senderID
+            
+            if !announcedPeerIDs.contains(peerIDHex) {
+                announcedPeerIDs.insert(peerIDHex)
+                print("[\(timeStr)] 👋 \(announcement.nickname) joined (\(peerIDHex.prefix(8)))")
+            }
         }
     } else if packet.type == 0x03 {
         print("[\(timeStr)] 👋 \(packet.senderID.hexEncodedString().prefix(8)) left")
@@ -85,12 +103,16 @@ anchor.onTaskReceived = { task in
 service.start()
 anchor.startPolling()
 
-print("🚀 Anchor BLE Bridge started")
-print("📡 Peer ID: \(myPeerID.hexEncodedString())")
+print("🚀 Anchor BLE Bridge")
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+print("📡 Peer ID:  \(myPeerID.hexEncodedString().prefix(8))...")
 print("👤 Nickname: \(myNickname)")
-print("\n✨ Waiting for bitchat peers...")
-print("💡 Open bitchat iOS app nearby to test connection")
-print("\nType a message and press Enter to send, or 'quit' to exit\n")
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+print("\n💬 Commands:")
+print("   /dm <nickname> <message>  - Send DM")
+print("   /peers                    - List peers")
+print("   quit                      - Exit")
+print("\n✨ Listening for peers and messages...\n")
 
 let stdinSource = DispatchSource.makeReadSource(fileDescriptor: STDIN_FILENO, queue: DispatchQueue.global(qos: .userInitiated))
 stdinSource.setEventHandler {
@@ -102,8 +124,39 @@ stdinSource.setEventHandler {
     }
     
     if !line.isEmpty {
-        print("📤 Sending: \(line)")
-        service.sendMessage(line)
+        if line.hasPrefix("/dm ") {
+            let parts = line.dropFirst(4).split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+            guard parts.count == 2 else {
+                print("❌ Usage: /dm <nickname> <message>")
+                return
+            }
+            
+            let target = String(parts[0])
+            let message = String(parts[1])
+            
+            if let peerID = discoveredPeers[target] {
+                print("📨 Sending DM to \(target): \(message)")
+                service.sendMessage(message, to: peerID)
+            } else if let peerID = Data(hexString: target) {
+                print("📨 Sending DM to \(target.prefix(8)): \(message)")
+                service.sendMessage(message, to: peerID)
+            } else {
+                print("❌ Unknown peer: \(target)")
+                print("💡 Use /peers to list discovered peers")
+            }
+        } else if line == "/peers" {
+            if discoveredPeers.isEmpty {
+                print("No peers discovered yet")
+            } else {
+                print("📋 Discovered peers:")
+                for (nickname, peerID) in discoveredPeers.sorted(by: { $0.key < $1.key }) {
+                    print("  • \(nickname) (\(peerID.hexEncodedString().prefix(8))...)")
+                }
+            }
+        } else {
+            print("📤 Broadcasting: \(line)")
+            service.sendMessage(line)
+        }
     }
 }
 stdinSource.resume()

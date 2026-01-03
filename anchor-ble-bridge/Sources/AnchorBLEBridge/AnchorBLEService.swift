@@ -36,8 +36,6 @@ public class AnchorBLEService: NSObject {
     }
     
     public func start() {
-        SecureLogger.info("Starting Anchor BLE service", category: .bluetooth)
-        
         queue.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             self?.sendAnnounce()
         }
@@ -77,13 +75,11 @@ public class AnchorBLEService: NSObject {
             do {
                 let signature = try signingPrivateKey.signature(for: packetDataForSigning)
                 packet.signature = signature
-                SecureLogger.info("✅ Signed announce packet (\(signature.count) bytes)", category: .bluetooth)
             } catch {
                 SecureLogger.error("Failed to sign announce: \(error)", category: .bluetooth)
             }
         }
         
-        SecureLogger.info("📢 Announce: nickname=\(myNickname) peerID=\(actualPeerID.prefix(8)) to \(connectedPeripherals.count)p+\(subscribedCentrals.count)c", category: .bluetooth)
         broadcastPacket(packet)
         
         queue.asyncAfter(deadline: .now() + 30.0) { [weak self] in
@@ -92,19 +88,31 @@ public class AnchorBLEService: NSObject {
     }
     
     public func sendMessage(_ content: String, to recipientPeerID: Data? = nil) {
+        let payload: Data
+        
+        if let recipientPeerID = recipientPeerID {
+            let messageID = UUID().uuidString
+            let privateMessage = PrivateMessagePacket(messageID: messageID, content: content)
+            
+            guard let tlvPayload = privateMessage.encode() else {
+                SecureLogger.error("Failed to encode private message with TLV", category: .bluetooth)
+                return
+            }
+            
+            payload = tlvPayload
+        } else {
+            payload = Data(content.utf8)
+        }
+        
         var packet = BitchatPacket(
             type: 0x02,
             senderID: myPeerID,
             recipientID: recipientPeerID,
             timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
-            payload: Data(content.utf8),
+            payload: payload,
             signature: nil,
             ttl: 7
         )
-        
-        if recipientPeerID != nil {
-            SecureLogger.info("📨 Sending directed message to \(recipientPeerID!.hexEncodedString().prefix(8))", category: .bluetooth)
-        }
         
         if let packetDataForSigning = packet.toBinaryDataForSigning() {
             do {
@@ -151,16 +159,14 @@ public class AnchorBLEService: NSObject {
         peripheralManager?.add(service)
         self.characteristic = char
         
-        SecureLogger.info("BLE peripheral setup complete", category: .bluetooth)
     }
     
     private func startAdvertising() {
-        let advertisementData: [String: Any] = [
-            CBAdvertisementDataServiceUUIDsKey: [Self.serviceUUID],
-            CBAdvertisementDataLocalNameKey: "Anchor"
-        ]
-        peripheralManager?.startAdvertising(advertisementData)
-        SecureLogger.info("Started BLE advertising", category: .bluetooth)
+        guard let peripheralManager = peripheralManager, peripheralManager.state == .poweredOn else {
+            return
+        }
+        
+        peripheralManager.startAdvertising([CBAdvertisementDataServiceUUIDsKey: [Self.serviceUUID]])
     }
     
     private func startScanning() {
@@ -174,7 +180,6 @@ public class AnchorBLEService: NSObject {
 
 extension AnchorBLEService: CBCentralManagerDelegate {
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        SecureLogger.info("Central state: \(central.state.rawValue)", category: .bluetooth)
         
         if central.state == .poweredOn {
             startScanning()
@@ -206,9 +211,7 @@ extension AnchorBLEService: CBCentralManagerDelegate {
     
     public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         if let error = error {
-            SecureLogger.error("Disconnected: \(peripheral.name ?? "Unknown") - Error: \(error.localizedDescription)", category: .bluetooth)
-        } else {
-            SecureLogger.info("Disconnected: \(peripheral.name ?? "Unknown") (clean disconnect)", category: .bluetooth)
+            SecureLogger.error("Error updating notification state on \(peripheral.name ?? "?"): \(error.localizedDescription)", category: .bluetooth)
         }
         connectedPeripherals.removeAll { $0 == peripheral }
         
@@ -223,7 +226,6 @@ extension AnchorBLEService: CBCentralManagerDelegate {
 
 extension AnchorBLEService: CBPeripheralManagerDelegate {
     public func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
-        SecureLogger.info("Peripheral state: \(peripheral.state.rawValue)", category: .bluetooth)
         
         if peripheral.state == .poweredOn {
             setupPeripheral()
@@ -236,7 +238,6 @@ extension AnchorBLEService: CBPeripheralManagerDelegate {
             SecureLogger.error("Error adding service: \(error.localizedDescription)", category: .bluetooth)
             return
         }
-        SecureLogger.info("Service added", category: .bluetooth)
     }
     
     public func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
@@ -297,28 +298,18 @@ extension AnchorBLEService: CBPeripheralDelegate {
             return
         }
         
-        guard let characteristic = service.characteristics?.first(where: { $0.uuid == Self.characteristicUUID }) else {
-            SecureLogger.warning("Characteristic not found on \(peripheral.name ?? "?")", category: .bluetooth)
+        guard let char = service.characteristics?.first(where: { $0.uuid == Self.characteristicUUID }) else {
             return
         }
         
-        if characteristic.properties.contains(.notify) {
-            peripheral.setNotifyValue(true, for: characteristic)
-        } else {
-            SecureLogger.warning("Characteristic doesn't support notify", category: .bluetooth)
+        if char.properties.contains(.notify) {
+            peripheral.setNotifyValue(true, for: char)
         }
     }
     
     public func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         if let error = error {
             SecureLogger.error("Error updating notification state on \(peripheral.name ?? "?"): \(error.localizedDescription)", category: .bluetooth)
-            return
-        }
-        
-        if characteristic.isNotifying {
-            SecureLogger.info("✅ Successfully subscribed to notifications from \(peripheral.name ?? "?")", category: .bluetooth)
-        } else {
-            SecureLogger.warning("Unsubscribed from notifications on \(peripheral.name ?? "?")", category: .bluetooth)
         }
     }
     
@@ -331,7 +322,6 @@ extension AnchorBLEService: CBPeripheralDelegate {
         guard let data = characteristic.value, !data.isEmpty else { return }
         
         if let packet = BitchatPacket.from(data) {
-            SecureLogger.info("RX packet from \(packet.senderID.hexEncodedString())", category: .bluetooth)
             onMessageReceived?(packet)
         }
     }
