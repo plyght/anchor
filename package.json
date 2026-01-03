@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --prefix-colors \"blue,green,yellow\" --prefix \"[{name}]\" --names \"convex,backend,frontend\" \"bunx convex dev\" \"cd backend && bun run dev\" \"cd frontend && bun run dev\"",
-    "postinstall": "bun install --cwd backend && bun install --cwd frontend",
+    "postinstall": "command -v bun >/dev/null && bun install --cwd backend && bun install --cwd frontend || true",
     "generateKeys": "node generateKeys.mjs"
   },
   "dependencies": {
