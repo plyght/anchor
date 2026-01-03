@@ -63,25 +63,24 @@ export const getTimedOutTasks = internalQuery({
     timeoutThreshold: v.number(),
     maxEscalationCount: v.number(),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("tasks"),
-      incident_id: v.id("incidents"),
-      escalation_count: v.number(),
-    })
-  ),
   handler: async (ctx, args) => {
     const tasks = await ctx.db
       .query("tasks")
       .withIndex("by_status", (q) => q.eq("status", "dispatched"))
       .collect();
 
-    return tasks.filter(
-      (task) =>
-        task.dispatched_at &&
-        task.dispatched_at < args.timeoutThreshold &&
-        task.escalation_count < args.maxEscalationCount
-    );
+    return tasks
+      .filter(
+        (task) =>
+          task.dispatched_at &&
+          task.dispatched_at < args.timeoutThreshold &&
+          task.escalation_count < args.maxEscalationCount
+      )
+      .map((task) => ({
+        _id: task._id,
+        incident_id: task.incident_id,
+        escalation_count: task.escalation_count,
+      }));
   },
 });
 

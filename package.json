@@ -8,7 +8,9 @@
     "frontend"
   ],
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail --prefix-colors \"blue,green,yellow\" --prefix \"[{name}]\" --names \"convex,backend,frontend\" \"bunx convex dev\" \"cd backend && bun run dev\" \"cd frontend && bun run dev\"",
+    "dev": "concurrently --kill-others-on-fail --prefix-colors \"blue,green,yellow,magenta\" --prefix \"[{name}]\" --names \"convex,backend,frontend,ble-bridge\" \"bunx convex dev\" \"cd backend && ANCHOR_BACKEND_URL=http://localhost:3000 bun run dev\" \"cd frontend && bun run dev\" \"cd anchor-ble-bridge && ANCHOR_BACKEND_URL=http://localhost:3000 ./.build/release/anchor-ble-cli || (swift build -c release && ANCHOR_BACKEND_URL=http://localhost:3000 ./.build/release/anchor-ble-cli)\"",
+    "demo": "concurrently --kill-others-on-fail --prefix-colors \"blue,green,magenta\" --prefix \"[{name}]\" --names \"convex,backend,ble-bridge\" \"bunx convex dev\" \"cd backend && ANCHOR_BACKEND_URL=http://localhost:3000 bun run dev\" \"cd anchor-ble-bridge && ANCHOR_BACKEND_URL=http://localhost:3000 ./.build/release/anchor-ble-cli || (swift build -c release && ANCHOR_BACKEND_URL=http://localhost:3000 ./.build/release/anchor-ble-cli)\"",
+    "demo:trigger": "./demo-hackathon.sh",
     "generateKeys": "node generateKeys.mjs"
   },
   "dependencies": {

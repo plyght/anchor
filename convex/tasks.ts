@@ -95,6 +95,59 @@ export const list = query({
   },
 });
 
+export const listWithVolunteers = query({
+  args: {
+    status: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("dispatched"),
+        v.literal("accepted"),
+        v.literal("in_progress"),
+        v.literal("completed"),
+        v.literal("cancelled"),
+        v.literal("failed")
+      )
+    ),
+    incident_id: v.optional(v.id("incidents")),
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db.query("tasks").fullTableScan();
+
+    if (args.incident_id) {
+      query = ctx.db
+        .query("tasks")
+        .withIndex("by_incident", (q) =>
+          q.eq("incident_id", args.incident_id!)
+        );
+    } else if (args.status) {
+      query = ctx.db
+        .query("tasks")
+        .withIndex("by_status", (q) =>
+          q.eq("status", args.status!)
+        );
+    }
+
+    const tasks = await query.order("desc").collect();
+    
+    const tasksWithVolunteers = await Promise.all(
+      tasks.map(async (task) => {
+        let target_volunteer_bitchat_username = undefined;
+        if (task.assigned_volunteer_id) {
+          const volunteer = await ctx.db.get(task.assigned_volunteer_id);
+          target_volunteer_bitchat_username = volunteer?.bitchat_username;
+        }
+        
+        return {
+          ...task,
+          target_volunteer_bitchat_username,
+        };
+      })
+    );
+    
+    return tasksWithVolunteers;
+  },
+});
+
 export const get = query({
   args: { id: v.id("tasks") },
   returns: v.union(

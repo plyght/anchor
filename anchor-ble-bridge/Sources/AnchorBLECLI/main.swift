@@ -59,7 +59,11 @@ service.onMessageReceived = { (packet: BitchatPacket) in
                     print("   ✅ Task response detected: code=\(code) action=\(action)")
                     
                     Task {
-                        await anchor.reportTaskResponse(taskId: code, volunteerId: volunteerId, action: action)
+                        let success = await anchor.reportTaskResponse(taskId: code, volunteerId: volunteerId, action: action)
+                        if success {
+                            let responseMsg = "\(code) \(action == "A" || action == "ACCEPT" ? "accepted" : action == "DONE" || action == "COMPLETE" ? "completed" : "declined")"
+                            service.sendMessage(responseMsg, to: packet.senderID)
+                        }
                     }
                 }
             }
@@ -120,7 +124,11 @@ service.onMessageReceived = { (packet: BitchatPacket) in
                             print("   ✅ Task response detected: code=\(code) action=\(action)")
                             
                             Task {
-                                await anchor.reportTaskResponse(taskId: code, volunteerId: volunteerId, action: action)
+                                let success = await anchor.reportTaskResponse(taskId: code, volunteerId: volunteerId, action: action)
+                                if success {
+                                    let responseMsg = "\(code) \(action == "A" || action == "ACCEPT" ? "accepted" : action == "DONE" || action == "COMPLETE" ? "completed" : "declined")"
+                                    service.sendMessage(responseMsg, to: packet.senderID)
+                                }
                             }
                         }
                     }
@@ -146,9 +154,15 @@ anchor.onTaskReceived = { task in
     print("   \(task.description)")
     print("   Code: \(task.acceptance_code)")
     
-    if let targetVolunteer = task.target_volunteer_id {
-        print("   🎯 Targeted to: \(targetVolunteer.prefix(8))")
-        service.sendMessage(task.meshMessage, to: task.recipientPeerID)
+    if let targetUsername = task.target_volunteer_bitchat_username {
+        print("   🎯 Targeted to: \(targetUsername)")
+        if let peerID = discoveredPeers[targetUsername] {
+            print("   📨 Sending DM to \(targetUsername)")
+            service.sendMessage(task.meshMessage, to: peerID)
+        } else {
+            print("   ⚠️  Peer '\(targetUsername)' not yet discovered, broadcasting instead")
+            service.sendMessage(task.meshMessage)
+        }
     } else {
         print("   📢 Broadcasting to all volunteers")
         service.sendMessage(task.meshMessage)

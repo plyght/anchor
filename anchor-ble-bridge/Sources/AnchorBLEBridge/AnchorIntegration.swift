@@ -6,6 +6,7 @@ public class AnchorIntegration {
     private let backendURL: String
     private var pollTimer: Timer?
     private var backendOffline = false
+    private var dispatchedTaskIds: Set<String> = []
     
     public var onTaskReceived: ((AnchorTask) -> Void)?
     
@@ -47,10 +48,13 @@ public class AnchorIntegration {
             }
             
             let body = try await response.body.collect(upTo: 1024 * 1024)
-            let tasks = try JSONDecoder().decode([AnchorTask].self, from: body)
+            let tasksResponse = try JSONDecoder().decode(TasksResponse.self, from: body)
             
-            for task in tasks {
-                onTaskReceived?(task)
+            for task in tasksResponse.tasks {
+                if !dispatchedTaskIds.contains(task._id) {
+                    dispatchedTaskIds.insert(task._id)
+                    onTaskReceived?(task)
+                }
             }
         } catch {
             if !backendOffline {
@@ -60,7 +64,8 @@ public class AnchorIntegration {
         }
     }
     
-    public func reportTaskResponse(taskId: String, volunteerId: String, action: String) async {
+    @discardableResult
+    public func reportTaskResponse(taskId: String, volunteerId: String, action: String) async -> Bool {
         do {
             let url = "\(backendURL)/api/tasks/\(taskId)/respond"
             var request = HTTPClientRequest(url: url)
@@ -74,10 +79,15 @@ public class AnchorIntegration {
             let response = try await httpClient.execute(request, timeout: .seconds(10))
             
             if response.status == .ok {
-                print("✅ Reported \(action) from \(volunteerId.prefix(8)) for task \(taskId)")
+                print("Reported \(action) from \(volunteerId.prefix(8)) for task \(taskId)")
+                return true
+            } else {
+                print("Response \(response.status.code) for task \(taskId)")
+                return false
             }
         } catch {
             print("❌ Failed to report task response: \(error)")
+            return false
         }
     }
 }
@@ -89,22 +99,22 @@ public struct AnchorTask: Codable {
     public let acceptance_code: String
     public let required_skills: [String]?
     public let location: String?
-    public let target_volunteer_id: String?
+    public let target_volunteer_bitchat_username: String?
     
     public var meshMessage: String {
-        if let target = target_volunteer_id {
-            return "TASK#\(_id): \(description) | Code: \(acceptance_code) [ASSIGNED TO YOU]"
-        }
-        return "TASK#\(_id): \(description) | Code: \(acceptance_code)"
+        return "\(title)\n\(description)\nReply: \(acceptance_code) A/D/DONE"
     }
     
-    public var recipientPeerID: Data? {
-        guard let target = target_volunteer_id else { return nil }
-        return Data(hexString: target)
+    public var targetBitchatUsername: String? {
+        return target_volunteer_bitchat_username
     }
 }
 
 struct TaskResponse: Codable {
     let volunteer_id: String
     let action: String
+}
+
+struct TasksResponse: Codable {
+    let tasks: [AnchorTask]
 }

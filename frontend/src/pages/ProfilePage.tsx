@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserCircle, X, Plus } from 'lucide-react';
+import { UserCircle, X, Plus, LogOut } from 'lucide-react';
+import { authClient } from '@/lib/auth-client';
 
 export default function ProfilePage() {
   const [skills, setSkills] = useState<string[]>([]);
@@ -21,6 +22,10 @@ export default function ProfilePage() {
 
   const removeSkill = (skill: string) => {
     setSkills(skills.filter(s => s !== skill));
+  };
+
+  const handleLogout = async () => {
+    await authClient.signOut();
   };
 
   return (
@@ -106,8 +111,12 @@ export default function ProfilePage() {
               </Select>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button className="ml-auto">Save Changes</Button>
+          <CardFooter className="flex justify-between">
+            <Button variant="destructive" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+            <Button>Save Changes</Button>
           </CardFooter>
         </Card>
       </div>
