@@ -4,7 +4,6 @@ services:
     type: web
     build:
       builder: buildpack
-      buildCommand: cd backend && npm install
     run:
       command: cd backend && npm run start:node
     ports:

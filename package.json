@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --prefix-colors \"blue,green,yellow\" --prefix \"[{name}]\" --names \"convex,backend,frontend\" \"bunx convex dev\" \"cd backend && bun run dev\" \"cd frontend && bun run dev\"",
     "postinstall": "command -v bun >/dev/null && bun install --cwd backend && bun install --cwd frontend || true",
