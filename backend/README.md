@@ -53,4 +53,4 @@ bun start
 bun start
 ```
 
-Server runs on http://localhost:3000
+Server runs on http://localhost:8000

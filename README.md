@@ -53,7 +53,7 @@ bun install
 bun run src/index.ts
 ```
 
-Backend runs on http://localhost:3000
+Backend runs on http://localhost:8000
 
 ### Frontend Setup
 
@@ -143,13 +143,13 @@ See [Convex Auth docs](https://labs.convex.dev/auth) for full configuration opti
 
 ```env
 VITE_CONVEX_URL=https://your-project.convex.cloud
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:8000
 ```
 
 ### Backend Environment
 
 ```env
-PORT=3000
+PORT=8000
 CONVEX_URL=https://your-project.convex.cloud
 CONVEX_DEPLOY_KEY=your-convex-deploy-key
 ```
@@ -309,11 +309,11 @@ This project has been migrated from Supabase to Convex. Key changes:
    - Select the `backend` directory as the build context
    - Set build command: `bun install`
    - Set run command: `bun start`
-   - Set port: `3000` (or use Koyeb's auto-detected port)
+   - Set port: `8000` (or use Koyeb's auto-detected port)
 
 3. **Configure Environment Variables** in Koyeb dashboard:
    ```
-   PORT=3000
+   PORT=8000
    CONVEX_URL=https://your-project.convex.cloud
    CONVEX_DEPLOY_KEY=prod:your-project|your-deploy-key
    ```

@@ -8,15 +8,15 @@ services:
     run:
       command: cd backend && npm run start:node
     ports:
-      - port: 3000
+      - port: 8000
         protocol: http
     env:
       - name: PORT
-        value: "3000"
+        value: "8000"
     healthcheck:
       http:
         path: /health
-        port: 3000
+        port: 8000
       initialDelaySeconds: 30
       timeoutSeconds: 10
       intervalSeconds: 10

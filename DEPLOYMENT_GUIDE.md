@@ -73,19 +73,19 @@ bunx convex deploy --prod
      ```bash
      cd backend && npm run start:node
      ```
-   - **Port**: `3000`
+   - **Port**: `8000`
 
 4. **Set Environment Variables**
    
    | Variable | Value | Example |
    |----------|-------|---------|
-   | `PORT` | `3000` | `3000` |
+   | `PORT` | `8000` | `8000` |
    | `CONVEX_URL` | Your production Convex URL | `https://your-prod.convex.cloud` |
    | `CONVEX_DEPLOY_KEY` | Your production deploy key | `prod:project\|key` |
 
 5. **Health Check** (already configured in `koyeb.yaml`)
    - Path: `/health`
-   - Port: `3000`
+   - Port: `8000`
    - Initial delay: 30 seconds
 
 6. **Deploy**
@@ -107,7 +107,7 @@ koyeb app create anchor-backend --git github.com/yourusername/anchor
 
 # Set environment variables
 koyeb service env set anchor-backend \
-  PORT=3000 \
+  PORT=8000 \
   CONVEX_URL=https://your-prod.convex.cloud \
   CONVEX_DEPLOY_KEY=prod:project|key
 ```
@@ -199,15 +199,15 @@ services:
     run:
       command: cd backend && npm run start:node
     ports:
-      - port: 3000
+      - port: 8000
         protocol: http
     env:
       - name: PORT
-        value: "3000"
+        value: "8000"
     healthcheck:
       http:
         path: /health
-        port: 3000
+        port: 8000
       initialDelaySeconds: 30
 ```
 
@@ -273,7 +273,7 @@ Build script optimized for Vercel:
 ### Koyeb (Backend)
 | Variable | Value | Where to Get |
 |----------|-------|--------------|
-| `PORT` | `3000` | Fixed value |
+| `PORT` | `8000` | Fixed value |
 | `CONVEX_URL` | Production Convex URL | From `bunx convex deploy --prod` |
 | `CONVEX_DEPLOY_KEY` | Production deploy key | Convex Dashboard → Settings → Deploy Keys |
 
@@ -354,7 +354,7 @@ curl https://your-backend.koyeb.app/health
   cd backend
   npm run build
   npm run start:node
-  curl localhost:3000/health
+  curl localhost:8000/health
   ```
 
 #### Issue: "Convex client not initialized"

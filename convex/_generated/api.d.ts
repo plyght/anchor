@@ -9,6 +9,7 @@
  */
 
 import type * as audit from "../audit.js";
+import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
 import type * as escalation from "../escalation.js";
 import type * as incidents from "../incidents.js";
@@ -24,6 +25,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   audit: typeof audit;
+  auth: typeof auth;
   crons: typeof crons;
   escalation: typeof escalation;
   incidents: typeof incidents;
