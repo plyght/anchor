@@ -276,7 +276,10 @@ export const matchIncident = mutation({
     unmatched_task_ids: v.array(v.id("tasks")),
   }),
   handler: async (ctx, args) => {
-    const matchResult = await ctx.runQuery(api.matching.matchTasksToVolunteers, {
+    const matchResult: {
+      assignments: Array<{ task_id: Id<"tasks">; volunteer_id: Id<"volunteers">; score: number }>;
+      unmatched: Id<"tasks">[];
+    } = await ctx.runQuery(api.matching.matchTasksToVolunteers, {
       incident_id: args.incident_id,
     });
 
@@ -290,7 +293,7 @@ export const matchIncident = mutation({
     return {
       matched: matchResult.assignments.length,
       unmatched: matchResult.unmatched.length,
-      assignments: matchResult.assignments.map((a) => ({
+      assignments: matchResult.assignments.map((a: { task_id: Id<"tasks">; volunteer_id: Id<"volunteers">; score: number }) => ({
         task_id: a.task_id,
         volunteer_id: a.volunteer_id,
         match_score: a.score,

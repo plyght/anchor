@@ -130,7 +130,7 @@ export const escalateTask = internalMutation({
     });
 
     const assignment = matchResult.assignments.find(
-      (a) => a.task_id === args.task_id
+      (a: { task_id: string; volunteer_id: string; score: number }) => a.task_id === args.task_id
     );
 
     if (assignment) {
