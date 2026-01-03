@@ -92,7 +92,7 @@ public class AnchorBLEService: NSObject {
     }
     
     public func sendMessage(_ content: String) {
-        let packet = BitchatPacket(
+        var packet = BitchatPacket(
             type: 0x02,
             senderID: myPeerID,
             recipientID: nil,
@@ -101,6 +101,15 @@ public class AnchorBLEService: NSObject {
             signature: nil,
             ttl: 7
         )
+        
+        if let packetDataForSigning = packet.toBinaryDataForSigning() {
+            do {
+                let signature = try signingPrivateKey.signature(for: packetDataForSigning)
+                packet.signature = signature
+            } catch {
+                SecureLogger.error("Failed to sign message: \(error)", category: .bluetooth)
+            }
+        }
         
         broadcastPacket(packet)
     }
