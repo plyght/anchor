@@ -7,21 +7,45 @@ echo "🌊 ANCHOR HACKATHON DEMO"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-echo "📋 Finding volunteer 'plight'..."
-VOLUNTEER_ID=$(bunx convex run volunteers:list | jq -r '.[] | select(.bitchat_username == "plight") | ._id' | head -1)
+echo "📋 Finding discovered peers on mesh network..."
+PEERS_FILE="$HOME/.anchor_discovered_peers.json"
 
-if [ -z "$VOLUNTEER_ID" ]; then
-    echo "❌ Volunteer 'plight' not found!"
-    echo "💡 Creating volunteer 'plight'..."
-    VOLUNTEER_ID=$(bunx convex run volunteers:create '{
-        "full_name": "Demo Volunteer",
-        "bitchat_username": "plight",
-        "skills": ["first_aid", "search_rescue"],
-        "current_status": "online"
-    }' | tr -d '"')
+if [ ! -f "$PEERS_FILE" ]; then
+    echo "❌ No discovered peers yet! Make sure anchor-ble-cli is running and peers have joined."
+    exit 1
 fi
 
-echo "✅ Volunteer ID: $VOLUNTEER_ID"
+DISCOVERED_PEERS=$(cat "$PEERS_FILE" | jq -r '.peers[]' | grep -v "^anchor-alerts$")
+PEER_COUNT=$(echo "$DISCOVERED_PEERS" | wc -l | tr -d ' ')
+
+if [ "$PEER_COUNT" -eq 0 ]; then
+    echo "❌ No peers discovered on mesh network yet (excluding anchor-alerts)!"
+    exit 1
+fi
+
+echo "✅ Found $PEER_COUNT peer(s) on mesh network (excluding anchor-alerts)"
+
+RANDOM_PEER=$(echo "$DISCOVERED_PEERS" | shuf -n 1)
+echo "🎲 Randomly selected: $RANDOM_PEER"
+
+VOLUNTEER_ID=$(bunx convex run volunteers:list | jq -r --arg peer "$RANDOM_PEER" '.[] | select(.bitchat_username == $peer) | ._id' | head -1)
+
+if [ -z "$VOLUNTEER_ID" ]; then
+    echo "💡 Creating volunteer profile for $RANDOM_PEER..."
+    VOLUNTEER_ID=$(bunx convex run volunteers:createForDemo "{
+        \"full_name\": \"$RANDOM_PEER\",
+        \"bitchat_username\": \"$RANDOM_PEER\",
+        \"skills\": [\"first_aid\", \"search_rescue\"],
+        \"current_status\": \"online\"
+    }" | tr -d '"')
+fi
+
+if [ -z "$VOLUNTEER_ID" ]; then
+    echo "❌ Failed to create volunteer profile!"
+    exit 1
+fi
+
+echo "✅ Volunteer ID: $VOLUNTEER_ID ($RANDOM_PEER)"
 echo ""
 
 echo "🚨 Creating Karachi flood incident..."

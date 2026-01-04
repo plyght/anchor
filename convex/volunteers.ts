@@ -205,6 +205,56 @@ export const create = mutation({
   },
 });
 
+export const createForDemo = mutation({
+  args: {
+    full_name: v.string(),
+    bitchat_username: v.string(),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    skills: v.optional(v.array(v.string())),
+    availability_schedule: v.optional(v.record(v.string(), v.array(v.string()))),
+    current_status: v.optional(
+      v.union(
+        v.literal("online"),
+        v.literal("offline"),
+        v.literal("busy"),
+        v.literal("responding")
+      )
+    ),
+    location: v.optional(
+      v.object({
+        lat: v.number(),
+        lon: v.number(),
+        address: v.string(),
+      })
+    ),
+  },
+  returns: v.id("volunteers"),
+  handler: async (ctx: any, args: any) => {
+    const existing = await ctx.db
+      .query("volunteers")
+      .filter((q: any) => q.eq(q.field("bitchat_username"), args.bitchat_username))
+      .first();
+    
+    if (existing) {
+      return existing._id;
+    }
+
+    return await ctx.db.insert("volunteers", {
+      user_id: "demo_" + args.bitchat_username,
+      full_name: args.full_name,
+      bitchat_username: args.bitchat_username,
+      phone: args.phone,
+      email: args.email,
+      skills: args.skills ?? [],
+      availability_schedule: args.availability_schedule ?? {},
+      current_status: args.current_status ?? "online",
+      location: args.location,
+      is_admin: false,
+    });
+  },
+});
+
 export const update = mutation({
   args: {
     id: v.id("volunteers"),

@@ -84,7 +84,14 @@ service.onMessageReceived = { (packet: BitchatPacket) in
             
             if !announcedPeerIDs.contains(peerIDHex) {
                 announcedPeerIDs.insert(peerIDHex)
-                print("[\(timeStr)] 👋 \(announcement.nickname) joined (\(peerIDHex.prefix(8)))")
+                print("[\(timeStr)] \(announcement.nickname) joined (\(peerIDHex.prefix(8)))")
+            }
+            
+            let peersFile = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(".anchor_discovered_peers.json")
+            let peersList = Array(discoveredPeers.keys)
+            if let jsonData = try? JSONEncoder().encode(["peers": peersList]) {
+                try? jsonData.write(to: peersFile)
             }
         }
     } else if packet.type == 0x10 {
